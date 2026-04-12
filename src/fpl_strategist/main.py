@@ -135,7 +135,10 @@ def recommend(
     verbose: bool = typer.Option(False, "--verbose", help="Show graph execution trace"),
 ) -> None:
     """Generate a transfer and captaincy recommendation for the next gameweek."""
-    console.print("[yellow]recommend command not yet implemented — coming in Phase 4[/yellow]")
+    console.print(
+        f"[yellow]recommend command not yet implemented — coming in Phase 4[/yellow]\n"
+        f"Provider: {provider}, Team: {team_id}, GW: {gw or 'auto'}, Verbose: {verbose}"
+    )
 
 
 @app.command()
