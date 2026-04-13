@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Ensure src/ is on the import path (needed when running as `python app.py`
+# without an editable install, e.g. on HuggingFace Spaces).
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
 from dotenv import load_dotenv
 
 load_dotenv()
