@@ -7,6 +7,7 @@ import asyncio
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.table import Table
 
 from fpl_strategist.data.fpl_client import FPLClient
@@ -162,46 +163,56 @@ async def _recommend(
         async for event in graph.astream(initial_state, stream_mode="updates"):
             for node_name, node_output in event.items():
                 result.update(node_output)
-                # Print per-node trace
+
                 if node_name == "fetch_context":
                     squad_count = len(node_output.get("current_squad", []))
                     cand_count = len(node_output.get("candidates", []))
                     bank = node_output.get("bank", 0)
                     ft = node_output.get("free_transfers", 0)
                     console.print(
-                        f"[cyan]\\[fetch_context][/cyan]        ✓ Squad loaded: "
-                        f"{squad_count} players, bank £{bank / 10:.1f}m, {ft} FT, "
-                        f"{cand_count} candidates"
+                        f"[cyan]{'fetch_context':<24}[/cyan] ✓ "
+                        f"Squad: {squad_count} players, £{bank / 10:.1f}m bank, "
+                        f"{ft} FT, {cand_count} candidates"
                     )
                 elif node_name == "analyze_and_propose":
                     transfer = node_output.get("proposed_transfer")
                     if transfer:
                         console.print(
-                            f"[cyan]\\[analyze_and_propose][/cyan]  ✓ Proposed: "
+                            f"[cyan]{'analyze_and_propose':<24}[/cyan] ✓ "
                             f"{transfer['out']['web_name']} → {transfer['in']['web_name']}"
                         )
                     else:
-                        console.print("[cyan]\\[analyze_and_propose][/cyan]  ✓ Proposed: Hold")
+                        console.print(
+                            f"[cyan]{'analyze_and_propose':<24}[/cyan] ✓ Hold"
+                        )
                 elif node_name == "validate_constraints":
                     valid = node_output.get("is_valid", False)
                     violations = node_output.get("violations", [])
                     if valid:
-                        console.print("[cyan]\\[validate_constraints][/cyan] ✓ All constraints passed")
+                        console.print(
+                            f"[cyan]{'validate_constraints':<24}[/cyan] ✓ All constraints passed"
+                        )
                     else:
-                        console.print("[cyan]\\[validate_constraints][/cyan] ✗ VIOLATION:")
+                        console.print(
+                            f"[cyan]{'validate_constraints':<24}[/cyan] [red]✗ FAILED[/red]"
+                        )
+                        console.print(Rule(style="red"))
                         for v in violations:
-                            console.print(f"    [red]{v}[/red]")
+                            console.print(f"    [red]•[/red] [red]{v}[/red]")
+                        console.print(Rule(style="red"))
                 elif node_name == "replan_transfer":
                     transfer = node_output.get("proposed_transfer")
                     count = node_output.get("replan_count", "?")
                     if transfer:
                         console.print(
-                            f"[cyan]\\[replan_transfer][/cyan]     ✓ Revised (attempt {count}): "
+                            f"[yellow]{'replan_transfer':<24}[/yellow] ⟳ "
+                            f"Attempt {count}: "
                             f"{transfer['out']['web_name']} → {transfer['in']['web_name']}"
                         )
                     else:
                         console.print(
-                            f"[cyan]\\[replan_transfer][/cyan]     ✓ Revised (attempt {count}): Hold"
+                            f"[yellow]{'replan_transfer':<24}[/yellow] ⟳ "
+                            f"Attempt {count}: Hold"
                         )
                 elif node_name == "select_captain":
                     cap = node_output.get("captain_pick")
@@ -209,34 +220,52 @@ async def _recommend(
                     cap_name = cap.get("name", "?") if isinstance(cap, dict) else str(cap)
                     vc_name = vc.get("name", "?") if isinstance(vc, dict) else str(vc)
                     console.print(
-                        f"[cyan]\\[select_captain][/cyan]      ✓ Captain: "
-                        f"{cap_name}, Vice: {vc_name}"
+                        f"[cyan]{'select_captain':<24}[/cyan] ✓ "
+                        f"Captain: {cap_name}, Vice: {vc_name}"
                     )
-                    cap_reasoning = node_output.get("captain_reasoning", "")
-                    if cap_reasoning:
-                        console.print(f"[bold]Captain reasoning:[/bold] {cap_reasoning}")
                 elif node_name == "explain_recommendation":
-                    console.print("[cyan]\\[explain][/cyan]              ✓ Done")
+                    console.print(
+                        f"[cyan]{'explain_recommendation':<24}[/cyan] ✓ Done"
+                    )
         console.print()
     else:
         result = await graph.ainvoke(initial_state)
 
-    # Always show key outputs
+    # Final recommendation panel
     transfer = result.get("proposed_transfer")
-    reasoning = result.get("transfer_reasoning", "")
+    captain = result.get("captain_pick")
+    vice_captain = result.get("vice_captain_pick")
+    recommendation = result.get("recommendation", "")
+    replan_count = result.get("replan_count", 0) or 0
+
+    lines: list[str] = []
 
     if transfer:
         out_p = transfer["out"]
         in_p = transfer["in"]
-        console.print(f"[bold green]Transfer:[/bold green] {out_p['web_name']} → {in_p['web_name']}")
+        lines.append(
+            f"[bold]Transfer:[/bold] {out_p['web_name']} "
+            f"(£{out_p['now_cost'] / 10:.1f}m) → "
+            f"{in_p['web_name']} (£{in_p['now_cost'] / 10:.1f}m)"
+        )
     else:
-        console.print("[bold yellow]Transfer:[/bold yellow] Hold (no transfer)")
+        lines.append("[bold]Transfer:[/bold] Hold (no transfer)")
 
-    console.print(f"[bold]Reasoning:[/bold] {reasoning}")
+    cap_name = captain.get("name", "?") if isinstance(captain, dict) else str(captain) if captain else "?"
+    vc_name = vice_captain.get("name", "?") if isinstance(vice_captain, dict) else str(vice_captain) if vice_captain else "?"
+    lines.append(f"[bold]Captain:[/bold] {cap_name} (C) / {vc_name} (VC)")
 
-    recommendation = result.get("recommendation")
+    lines.append("")
     if recommendation:
-        console.print(f"\n[bold]Full recommendation:[/bold]\n{recommendation}")
+        lines.append(recommendation)
+
+    if replan_count > 0:
+        lines.append("")
+        lines.append(
+            f"[yellow]⟳ {replan_count} replan attempt{'s' if replan_count != 1 else ''}[/yellow]"
+        )
+
+    console.print(Panel("\n".join(lines), title="Recommendation", border_style="green"))
 
 
 @app.command()
