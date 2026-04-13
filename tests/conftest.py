@@ -12,7 +12,10 @@ from fpl_strategist.data.models import Fixture, Player
 # Load .env so API keys are available during VCR recording.
 # In playback mode the actual key isn't used (VCR replays from cassette),
 # but ChatOpenAI still validates that the env var exists at construction time.
+# CI has no .env — set a dummy key so the constructor doesn't blow up.
 load_dotenv()
+if not os.environ.get("OPENAI_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = "sk-test-placeholder-for-vcr-playback"
 
 
 # ---------------------------------------------------------------------------
