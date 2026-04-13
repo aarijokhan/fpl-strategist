@@ -88,6 +88,14 @@ async def replan_transfer(state: FPLState) -> dict:
     """
     new_count = state.get("replan_count", 0) + 1
 
+    # Capture the rejected proposal and its violations for the explain node
+    rejected_proposals = list(state.get("rejected_proposals", []))
+    replan_violations_history = list(state.get("replan_violations_history", []))
+    prev_proposal = state.get("proposed_transfer")
+    if prev_proposal is not None:
+        rejected_proposals.append(prev_proposal)
+    replan_violations_history.append(list(state.get("violations", [])))
+
     provider = state.get("provider", "openai")
     llm = get_chat_model(model=MODEL, provider=provider)
     structured_llm = llm.with_structured_output(TransferProposal)
@@ -113,11 +121,17 @@ async def replan_transfer(state: FPLState) -> dict:
 
     result: TransferProposal = await structured_llm.ainvoke([HumanMessage(content=prompt)])
 
+    history = {
+        "rejected_proposals": rejected_proposals,
+        "replan_violations_history": replan_violations_history,
+    }
+
     if result.action == "hold" or result.player_out_id is None or result.player_in_id is None:
         return {
             "proposed_transfer": None,
             "transfer_reasoning": result.reasoning,
             "replan_count": new_count,
+            **history,
         }
 
     # Look up full player dicts
@@ -135,10 +149,12 @@ async def replan_transfer(state: FPLState) -> dict:
                 f"but one could not be resolved. Original reasoning: {result.reasoning}"
             ),
             "replan_count": new_count,
+            **history,
         }
 
     return {
         "proposed_transfer": {"out": resolved_out, "in": resolved_in},
         "transfer_reasoning": result.reasoning,
         "replan_count": new_count,
+        **history,
     }

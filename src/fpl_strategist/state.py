@@ -39,6 +39,10 @@ class FPLState(TypedDict, total=False):
     violations: list[str]           # Human-readable constraint violation messages
     replan_count: int               # Incremented in replan_transfer node only, capped at 2
 
+    # --- Replan history (appended to by replan_transfer for explain node) ---
+    rejected_proposals: list[dict]          # Previous proposals that failed validation
+    replan_violations_history: list[list[str]]  # Violations for each rejected proposal
+
     # --- Captain (set by select_captain) ---
     captain_pick: dict | None       # {"id": int, "name": str}
     vice_captain_pick: dict | None  # {"id": int, "name": str}

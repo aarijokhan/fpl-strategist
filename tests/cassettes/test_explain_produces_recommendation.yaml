@@ -1,0 +1,154 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an FPL content creator writing
+      a weekly transfer and captaincy recommendation. Your voice is like FPL Andy
+      from Let's Talk FPL: direct, specific, decisive, assumes the reader knows the
+      basics of FPL. No hedging, no filler, no meta-commentary about being an AI or
+      an agent.\\n\\n# Context\\nTarget gameweek: GW 30\\n\\n## Transfer Decision\\nTransfer
+      OUT: Elanga (\xA35.5m, form 1.5)\\nTransfer IN: Diaz (\xA38.0m, form 6.5)\\n\\n##
+      Transfer Reasoning\\nElanga has been in poor form (1.5) with a tough away fixture
+      against Brighton (difficulty 3). Diaz is in strong form (6.5) with an easy home
+      fixture against Southampton (difficulty 2) and EP next of 6.0.\\n\\n## Replan
+      History\\nNo replan occurred \u2014 the initial proposal passed all constraints.\\n\\n##
+      Captaincy\\nCaptain: Salah\\nVice-captain: Haaland\\n\\nCaptain reasoning: Salah
+      (form 8.5, EP 7.0) has a home fixture against Southampton (difficulty 2) \u2014
+      the easiest match of the week. Haaland (form 7.0) faces Arsenal away (difficulty
+      3), making him the ideal vice.\\n\\n# Task\\nWrite a 3-5 paragraph recommendation
+      that an FPL manager would actually read and act on.\\n\\nStructure:\\n1. Lead
+      with the decision \u2014 the transfer and the captain pick, stated confidently
+      and clearly.\\n2. Explain why \u2014 the footballing logic behind the transfer.
+      Cite specific form values, expected points, fixture difficulties, and opponent
+      names. Do not summarise away the specificity that the data provides.\\n3. Explain
+      the captaincy choice with the same specificity \u2014 form, fixture, track record
+      of returns.\\n4. If a replan occurred, briefly acknowledge it: what was initially
+      proposed, why it was rejected (cite the specific constraint violation), and
+      why the revised pick is sound. Frame this as honesty about the process, not
+      as a weakness.\\n5. Close with any caveats or what to watch for \u2014 e.g.
+      a press conference that could change the calculus, or a player worth monitoring
+      for next week.\\n\\n# Style\\n- Authoritative and conversational. Confident,
+      not hedging.\\n- No generic filler like \\\"based on the analysis above\\\"
+      or \\\"after careful consideration.\\\"\\n- Cite specific numbers: form values,
+      EP next, fixture difficulties, prices.\\n- If the decision is to hold, explain
+      what was considered, why no transfer was clearly better, and what to watch for
+      next gameweek.\\n- Do not refer to yourself as an AI, agent, model, or system.\\n-
+      Do not use bullet points or headers \u2014 write flowing prose paragraphs.\\n\\n#
+      Output format\\nReturn ONLY the recommendation text \u2014 no JSON wrapper,
+      no preamble, no \\\"Here is my recommendation:\\\" lead-in. Just the paragraphs.\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o\",\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2680'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/4xWzW4bNxC++ykIXdICK0GxHctuTymSIm3RIEASBEgTCKPd2V3GXJIlubaVIEAe
+        ope+Xp6k35BaS0586MELa0nOzPczw/10pNRMN7Of1KzuKdWDN/Mnr1eruhl+O39hnv7tf6VxeXPG
+        b93l769ev/04q+SE23zgOk2nFrXDOU7a2bJcB6bEEvXhanW2PLt4dH6eFwbXsJFjnU/zUzc/Xh6f
+        zpfn8+XZ7mDvdM0RO/7CT6U+5aeUaBu+wetlNb0ZOEbqGO+mTXgZnJE3M4pRx0Q2zar9Yu1sYpur
+        ftXrqK6ZLys8HwRWA11q2ylSDdc66iu8cXhstioFsrHlEGTdjUk9NWQ7UmQbtZGX8l5b9UTTx8W0
+        iOiytRlZJackmXcuqNaFQblWPVw8yudbqndZddvqejRJ0TVtVatv0oiqqCNtY1K/BN31yVlU2+u6
+        V4E7wOMQcXTaextiqwKlXGyrThbqTyaLU4arXKKUhmoR1usMKddESZ0tHlW5qJ6/fvk3qs6hGNl4
+        pXO03g1CU6r70d8W9hIoexo8alPXOvWHUA7r+DBi8/FCPUN2vvHwDjegRNsU1Q9PX/yoLN8k1dHA
+        Iooiwa6iM7pBXctqkicJk5MgUh1T3KpiGgGiNs4IL7J341COHgZuNLyYkXkn+msyIBCc2bh4Z9/Z
+        5+66UrCGQ3hWNfkEbPUWRQwbOfX1yz9Kp8xJz9TkOpx6SYb6hXpTQEfomLQxBfAk8/lO5m8RY2kl
+        qJAvFLKtU8a5jNETqOr1UMAKHaCNlTe0jaJT1uEe/idvCEPAAWY0Y8dkDwjkyYO1HHZiuhKNUBji
+        HugGoTI81VNU6BrpJRBntugOg94IOKFtSRFKQbs0kju4sevF/VJGxCapTWjYwzU6JQPLunGTit+M
+        wa9iEwBKBeBCPRaHb6i+HH2lnhGKkjh0yQXkFXSf7xWLeDLiPYj7zhocwGNIGcOlVe82WFKPQ2RL
+        pkJR8Xsq0EBvpHluk+ssVhQTdsIm/q9dNtykSRL8ynnvLEiLVeEy457SJu0LgFgTYoNLEaWlqzIj
+        7hoxm/SNkBI5xbv6KfIU0qQ5bQAFDMBfBIvDMja7V9a01dn5PjjvIv4Rv0+dVAaDzbkPxhu2oAl2
+        XsjtfbdDBoZQUM6NITOSuEM3Bi0dSPmA2IDsFvAwNzguVB68hq/YSJW1IezeSuoyd52d71od8SAY
+        8tmCTcZxpfBrDGUSsMiHP6hBLTJKMgxJyMOcm3QrZVHKLe9sZvEPZp/HxjY3hFRm0G7zQdsRM2L0
+        DTBAiOAGEIULRtwPgoTVuOuv2o0GLmlbtLRKTAOMY3k+QlGwJ20KQludLI7DwOZa+jbwAMpAFur8
+        GR1zDQZCBWeXawWFQFb8M9ppVlRFaEiOcRv7nNSDTaASunzQ6DooqQWcKDXQjR70Ry64d5OmzLms
+        661lTpaLw1sxcDvCD7gV7WjMwQJZ6xJJ+Hwfv9+tfL69gY3r4KZN/OborIXXYr8OufXlto3J+Vle
+        /Yzn+3zTj3cu7xkCYYqtk7vknO5seVrizfbfFvvVk9XFbjWhRLNfuDg/qe4JuG4YljXx4GNhVhMc
+        2eyP7r8saGy0O1g4OoD9fTn3xS7QIej/Cb9fqGv2kH4N6zW6vgt5vy3wh+yQ+7fd0pwLnkUOMiTX
+        CZNapGi4JQy28rUVt5h4wxp6YZTBUeXbqPXrFV0Qn5w+PD6eHX0++g8AAP//AwBqxpV0JAoAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9eb92986e941d5f6-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Apr 2026 08:39:53 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '4781'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=yUlGME6lOF3.yoMxE.ZpfzFWCHVaUpRrAfAOCLnpakY-1776069587.0267677-1.0.1.1-jVhPJO3ERU0Nc_DtsQPUObi0q4GDv_8tWMoar7_FJpjLoo24kdVdoyBWi3MKv0zIOLzGHoCBV3C3.DCFlJfKyLjW1Sx7qESnWLEvK.SOBlqdRiN9NN7v0BJ19lmXRt6E;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 13 Apr 2026
+        09:09:53 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '30000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '29358'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 1.284s
+      x-request-id:
+      - req_0403213280ac4795abf449def921aef6
+    status:
+      code: 200
+      message: OK
+version: 1

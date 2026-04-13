@@ -1,0 +1,25 @@
+Auto-detected next gameweek: GW 33
+
+Running agent for team 44, GW 33...
+
+[fetch_context]        ✓ Squad loaded: 15 players, bank £1.2m, 2 FT, 80 candidates
+[analyze_and_propose]  ✓ Proposed: Calvert-Lewin → Gyökeres
+[validate_constraints] ✗ VIOLATION:
+    Insufficient budget: need £8.8m, have £6.8m (bank £1.2m + sale £5.6m).
+[replan_transfer]     ✓ Revised (attempt 1): Calvert-Lewin → Beto
+[validate_constraints] ✓ All constraints passed
+[select_captain]      ✓ Captain: Haaland, Vice: B.Fernandes
+Captain reasoning: Haaland has excellent form with a recent expected points of 4.5 and is playing against Burnley, which has a low fixture difficulty rating of 2, making him a prime candidate for a high-scoring game. As a backup, B. Fernandes has a strong form rating (7.7) and faces Chelsea away, with a fixture difficulty of 3, providing a good secondary option for points.
+[explain]              ✓ Done
+
+Transfer: Calvert-Lewin → Beto
+Reasoning: I propose to transfer out Calvert-Lewin (id=691) and bring in Beto (id=311). This maintains the forward position and provides a player with good form and favorable fixtures, while fitting within the budget constraints that caused the previous proposal to be rejected.
+
+Full recommendation:
+Make the move to transfer out Calvert-Lewin and bring in Beto. Calvert-Lewin has been struggling with form, recording a low score of 0.7, and with tougher fixtures on the horizon, it's time to look elsewhere. Beto comes in priced at £5.0m and boasts an impressive form of 8.3, which demonstrates his consistency and point-scoring potential. His upcoming fixtures also offer a good opportunity to capitalize, with Leeds up next, a team not known for their defensive solidity.
+
+Turning our attention to the captaincy, there's no going past Haaland this week. He's in top form with an expected points of 4.5 and faces Burnley, who have shown vulnerability in defense. The fixture has a difficulty rating of 2, making Haaland a no-brainer as captain. His remarkable goal-scoring abilities and City's attacking prowess spell trouble for Burnley, so expect a big return. As a safety net, B. Fernandes holds the vice-captaincy with a form of 7.7 and a fixture against Chelsea. While Chelsea away is a bit tougher at a difficulty rating of 3, Fernandes' role in United's midfield remains critical and he's capable of delivering points with his creativity and goal threat.
+
+We initially considered Calvert-Lewin to Gyökeres, but that was quickly off the table due to budget constraints, as Gyökeres was priced too high, and we were limited to a £6.8m total after the sale. This led us to settle on Beto, who not only fits the budget but also offers a fantastic form and fixture combination.
+
+Keep an eye out for any team news in the pre-match press conferences, especially regarding Haaland and the City squad rotation, which could impact the armband decision. Also, monitor Beto's involvement and performance to ensure the form continues over the next few weeks.
