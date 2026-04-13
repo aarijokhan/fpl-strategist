@@ -1,0 +1,16 @@
+  Demo run (recommend 44 --verbose --force-replan):                                                                                                     
+  [fetch_context]        ✓ Squad loaded: 15 players, bank £1.2m, 2 FT, 80 candidates                                                                    
+  [analyze_and_propose]  ✓ Proposed: Calvert-Lewin → Gyökeres                       
+  [validate_constraints] ✗ VIOLATION:                                                                                                                   
+      Insufficient budget: need £8.8m, have £6.8m (bank £1.2m + sale £5.6m).                                                                            
+  [replan_transfer]     ✓ Revised (attempt 1): Calvert-Lewin → Beto         
+  [validate_constraints] ✓ All constraints passed                                                                                                       
+  [select_captain]      ✓ Captain: stub (not implemented)                                                                                               
+  [explain]              ✓ Done                          
+                                                                                                                                                        
+  Transfer: Calvert-Lewin → Beto                                                                                                                        
+  Reasoning: ...bringing in Beto (id=311). This transfer retains the forward
+  position while providing a more viable option within the budget, given Beto's                                                                         
+  affordable price of £5.0m...                                                                                                                        
+                                                                                                                                                        
+  The forced budget violation (Gyökeres at £8.8m vs £6.8m available) triggered one replan, and the LLM corrected to a cheaper alternative.

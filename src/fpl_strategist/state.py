@@ -19,6 +19,7 @@ class FPLState(TypedDict, total=False):
     team_id: int
     target_gw: int
     provider: str  # "openai" or "anthropic", default "openai"
+    force_replan: bool  # Demo mode: force invalid first proposal
 
     # --- Data layer (set by fetch_context) ---
     current_squad: list[dict]       # 15 players enriched with form, fixtures, price

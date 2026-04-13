@@ -1,0 +1,163 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an expert Fantasy Premier
+      League analyst. Your previous transfer proposal was rejected by the constraint
+      validator. You must propose a DIFFERENT transfer that avoids the specific violations
+      listed below.\\n\\n# Context\\nTarget gameweek: GW 30\\n\\n## Current Squad\\nName
+      (id) | Pos | Team | Form | Price | EP Next | Fixture\\n--- | --- | --- | ---
+      | --- | --- | ---\\nAlisson (id=100) | GKP | LIV | 5.0 | \xA35.5m | 4.5 | SOU(H)
+      [2]\\nRaya (id=101) | GKP | ARS | 4.5 | \xA35.5m | 4.0 | MCI(H) [4]\\nAlexander-Arnold
+      (id=200) | DEF | LIV | 6.0 | \xA38.5m | 5.5 | SOU(H) [2]\\nSaliba (id=201) |
+      DEF | ARS | 5.5 | \xA36.0m | 4.5 | MCI(H) [4]\\nGvardiol (id=202) | DEF | MCI
+      | 4.0 | \xA36.0m | 3.5 | ARS(A) [3]\\nEstupinan (id=203) | DEF | BHA | 3.0 |
+      \xA35.0m | 2.5 | NFO(H) [2]\\nMitchell (id=204) | DEF | CRY | 2.0 | \xA34.5m
+      | 1.5 | BRE(A) [3]\\nSalah (id=300) | MID | LIV | 8.5 | \xA313.0m | 7.0 | SOU(H)
+      [2]\\nPalmer (id=301) | MID | CHE | 7.0 | \xA311.0m | 6.0 | BOU(H) [2]\\nSaka
+      (id=302) | MID | ARS | 6.0 | \xA310.0m | 5.5 | MCI(H) [4]\\nMbeumo (id=303)
+      | MID | BRE | 5.0 | \xA37.5m | 4.5 | CRY(H) [2]\\nElanga (id=304) | MID | NFO
+      | 1.5 | \xA35.5m | 1.0 | BHA(A) [3]\\nHaaland (id=400) | FWD | MCI | 7.0 | \xA314.5m
+      | 6.5 | ARS(A) [3]\\nWatkins (id=401) | FWD | AVL | 5.5 | \xA38.5m | 5.0 | NEW(H)
+      [3]\\nSolanke (id=402) | FWD | TOT | 4.0 | \xA37.5m | 3.5 | EVE(H) [2]\\n\\nBudget
+      in bank: \xA31.0m | Free transfers: 1\\n\\n## Transfer Candidates (pre-filtered,
+      grouped by position)\\n### GKP\\n  Flekken (id=110) | Form: 4.0 | EP: 3.5 |
+      \xA34.5m | CRY(H) [2]\\n\\n### DEF\\n  Pedro Porro (id=210) | Form: 6.0 | EP:
+      5.0 | \xA35.5m | EVE(H) [2]\\n  Gabriel (id=211) | Form: 5.0 | EP: 4.0 | \xA35.5m
+      | MCI(H) [4]\\n  Mykolenko (id=212) | Form: 4.0 | EP: 3.0 | \xA34.4m | TOT(A)
+      [4]\\n\\n### MID\\n  Diaz (id=310) | Form: 6.5 | EP: 6.0 | \xA38.0m | SOU(H)
+      [2]\\n  Gordon (id=311) | Form: 5.5 | EP: 5.0 | \xA37.5m | AVL(A) [3]\\n  Rogers
+      (id=312) | Form: 5.0 | EP: 4.5 | \xA35.5m | NEW(H) [3]\\n  Eze (id=313) | Form:
+      4.5 | EP: 4.0 | \xA37.0m | BRE(A) [3]\\n\\n### FWD\\n  Isak (id=410) | Form:
+      7.5 | EP: 7.0 | \xA39.0m | AVL(A) [3]\\n  Joao Pedro (id=412) | Form: 5.0 |
+      EP: 4.5 | \xA36.0m | NFO(H) [2]\\n  Welbeck (id=413) | Form: 4.5 | EP: 4.0 |
+      \xA35.5m | NFO(H) [2]\\n\\n# Previous attempt\\nYou proposed: Solanke (id=402)
+      OUT \u2192 Isak (id=410) IN\\nReasoning: Isak has great form and a decent fixture.\\n\\n#
+      Violations\\nThe constraint validator rejected your proposal for these reasons:\\n1.
+      Insufficient budget: need \xA39.0m, have \xA38.5m (bank \xA31.0m + sale \xA37.5m).\\n\\n#
+      Task\\nPropose a DIFFERENT transfer \u2014 at minimum a different player_in_id,
+      and optionally a different player_out_id \u2014 that avoids the violations listed
+      above. If no reasonable alternative transfer exists given the constraints, output
+      \\\"hold\\\" (action=\\\"hold\\\", both IDs null).\\n\\nFocus on:\\n- Avoiding
+      the specific constraints that were violated\\n- Finding the next-best candidate
+      on footballing merit\\n- Same position replacement (like-for-like)\\n\\n# Rules\\nDo
+      NOT check or enforce any of the following \u2014 they are validated deterministically
+      downstream and are NOT your concern:\\n- Budget constraints (whether the user
+      can afford the transfer)\\n- Team limits (max 3 players per Premier League team)\\n-
+      Squad size or formation rules\\n- Player availability, injury status, or suspensions\\n\\nThe
+      deterministic validator runs again after this node. If your revised proposal
+      also violates constraints, you will be asked to try yet again (up to 2 total
+      replans).\\n\\n# Output format\\nReturn a JSON object with these exact fields:\\n-
+      action: \\\"transfer\\\" or \\\"hold\\\"\\n- player_out_id: the squad player's
+      ID to transfer out (null if hold)\\n- player_in_id: the candidate's ID to bring
+      in (null if hold)\\n- reasoning: 2-3 sentences explaining your revised logic
+      and how it avoids the violation\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Structured
+      output from analyze_and_propose and replan_transfer nodes.\",\"properties\":{\"action\":{\"enum\":[\"transfer\",\"hold\"],\"title\":\"Action\",\"type\":\"string\"},\"player_out_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      Out Id\"},\"player_in_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      In Id\"},\"reasoning\":{\"title\":\"Reasoning\",\"type\":\"string\"}},\"required\":[\"action\",\"player_out_id\",\"player_in_id\",\"reasoning\"],\"title\":\"TransferProposal\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"TransferProposal\",\"strict\":true}},\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4503'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Helper-Method:
+      - chat.completions.parse
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/4xTUWvbMBB+z68QetogLnGaOl1hDx1jD4OOsbExuhRzkc6OVllnJLlpKfnvOzlJ
+        7W4d7EXY99336Tvd3eNECGm0vBBSbSCqprXZ+2/F96vtux+Xub8+b7an1fXDVRHNZdEUZ3dymhi0
+        /oUqHlknipiH0ZDbw8ojREyq+XJZzIrlPC96oCGNNtHqNmYLyhrjTDafzRfZbJnl5wf2hozCwGk/
+        +VeIx/5MPp3Gew7PpsdIgyFAjRw7JnHQk00RCSGYEMFFOR1ARS6i660/riSoZHolL1YyenChQr+S
+        05VsLTygL6mLpdEML2bzIWrcIZinIJcayBlX9ypfkJMU/4mvZMHdonhl9FumvxZbEzfiIwGJz6g9
+        7YGcAbCWtkFU5AWkcwtei7CFtqewB4H3ClEn1bhBse50jVFwJYFNGxfDyViXKq4iiJpIi5ZSsQbs
+        /naWhzvysLYoKnMfO48CapYIUXyiGPmGDTTiA3nkCDgtTGCSNbeYsbEsfQjfl4gNCwvjekdH0y0F
+        kx70ZCV340f3WHUBUuNdZ+0IAOcoQqL07b45ILunBluqW0/r8AdVVjw4YVPuHz81M0RqZY/u+Lzp
+        B6l7NhuShZo2lpFusb8uP1uc7gXlMMADvFwcwMgW7YhW5MvpC4qlxgjGhtEwSgVqg3rgDpMLnTY0
+        Aiajuv+285L20+D9j/wAKIUt72bZep4o9bzkIc1jWvB/pT29c29YBvR3vLFlNOhTLzRW0Nn92snw
+        ECI2JTesRt96s9+9qi1Pz9ewXsPizUJOdpPfAAAA//8DAOneTyuJBAAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9eb8efa06c71b157-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Apr 2026 08:00:18 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '1476'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=s6bLfO_ELvt2wlMp9HUxrd9eZxjJwidP3ox4jkk5fCc-1776067215.4268522-1.0.1.1-y30RsNmWZYx35xBrPj2VCCRx1jPyAn.UE.u_5A0vk_zy4k.LXcaa5DpQqzZ7VZX.qpcvc1uKQh_NgJYujIU4HtqHfQUjnRvJVNkN1I.YM9J1ghi2G9D58rTN.Dnjpb78;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 13 Apr 2026
+        08:30:18 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '199072'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 278ms
+      x-request-id:
+      - req_e6a6e71bdada45c1aa61b851347a3c87
+    status:
+      code: 200
+      message: OK
+version: 1

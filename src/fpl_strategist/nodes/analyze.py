@@ -108,8 +108,36 @@ def _format_candidates(candidates: list[dict]) -> str:
     return "\n\n".join(sections)
 
 
+def _force_invalid_proposal(state: FPLState) -> dict:
+    """Demo mode: return an unaffordable transfer to exercise the replan loop."""
+    candidates = state.get("candidates", [])
+    squad = state["current_squad"]
+
+    # Pick the most expensive candidate
+    most_expensive = max(candidates, key=lambda c: c["now_cost"])
+    target_pos = most_expensive["element_type"]
+
+    # Pair with the cheapest squad player of the same position
+    same_pos = [p for p in squad if p["element_type"] == target_pos]
+    if not same_pos:
+        same_pos = squad
+    cheapest = min(same_pos, key=lambda p: p.get("selling_price", p["now_cost"]))
+
+    return {
+        "proposed_transfer": {"out": cheapest, "in": most_expensive},
+        "transfer_reasoning": (
+            "[FORCE-REPLAN] Deliberately proposing an unaffordable transfer "
+            "to exercise the replan loop."
+        ),
+    }
+
+
 async def analyze_and_propose(state: FPLState) -> dict:
     """Evaluate the squad and propose one transfer using an LLM."""
+    # Demo mode: force an invalid proposal to exercise the replan loop
+    if state.get("force_replan"):
+        return _force_invalid_proposal(state)
+
     provider = state.get("provider", "openai")
     llm = get_chat_model(model=MODEL, provider=provider)
     structured_llm = llm.with_structured_output(TransferProposal)

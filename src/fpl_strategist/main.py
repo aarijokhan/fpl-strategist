@@ -127,7 +127,9 @@ def inspect(
     asyncio.run(_inspect(team_id, gw))
 
 
-async def _recommend(team_id: int, gw: int | None, provider: str, verbose: bool) -> None:
+async def _recommend(
+    team_id: int, gw: int | None, provider: str, verbose: bool, force_replan: bool = False,
+) -> None:
     from dotenv import load_dotenv
 
     from fpl_strategist.graph import build_graph
@@ -149,22 +151,69 @@ async def _recommend(team_id: int, gw: int | None, provider: str, verbose: bool)
         "team_id": team_id,
         "target_gw": gw,
         "provider": provider,
+        "force_replan": force_replan,
     }
 
     console.print(f"\n[bold]Running agent for team {team_id}, GW {gw}...[/bold]\n")
 
-    result = await graph.ainvoke(initial_state)
-
-    # Verbose: dump key state fields
     if verbose:
-        console.print("[dim]--- State dump ---[/dim]")
-        for key in [
-            "proposed_transfer", "transfer_reasoning", "is_valid", "violations",
-            "replan_count", "captain_pick", "vice_captain_pick", "recommendation",
-        ]:
-            val = result.get(key)
-            console.print(f"  [cyan]{key}:[/cyan] {val}")
+        # Stream node-by-node for visible trace
+        result = {}
+        async for event in graph.astream(initial_state, stream_mode="updates"):
+            for node_name, node_output in event.items():
+                result.update(node_output)
+                # Print per-node trace
+                if node_name == "fetch_context":
+                    squad_count = len(node_output.get("current_squad", []))
+                    cand_count = len(node_output.get("candidates", []))
+                    bank = node_output.get("bank", 0)
+                    ft = node_output.get("free_transfers", 0)
+                    console.print(
+                        f"[cyan]\\[fetch_context][/cyan]        ✓ Squad loaded: "
+                        f"{squad_count} players, bank £{bank / 10:.1f}m, {ft} FT, "
+                        f"{cand_count} candidates"
+                    )
+                elif node_name == "analyze_and_propose":
+                    transfer = node_output.get("proposed_transfer")
+                    if transfer:
+                        console.print(
+                            f"[cyan]\\[analyze_and_propose][/cyan]  ✓ Proposed: "
+                            f"{transfer['out']['web_name']} → {transfer['in']['web_name']}"
+                        )
+                    else:
+                        console.print("[cyan]\\[analyze_and_propose][/cyan]  ✓ Proposed: Hold")
+                elif node_name == "validate_constraints":
+                    valid = node_output.get("is_valid", False)
+                    violations = node_output.get("violations", [])
+                    if valid:
+                        console.print("[cyan]\\[validate_constraints][/cyan] ✓ All constraints passed")
+                    else:
+                        console.print("[cyan]\\[validate_constraints][/cyan] ✗ VIOLATION:")
+                        for v in violations:
+                            console.print(f"    [red]{v}[/red]")
+                elif node_name == "replan_transfer":
+                    transfer = node_output.get("proposed_transfer")
+                    count = node_output.get("replan_count", "?")
+                    if transfer:
+                        console.print(
+                            f"[cyan]\\[replan_transfer][/cyan]     ✓ Revised (attempt {count}): "
+                            f"{transfer['out']['web_name']} → {transfer['in']['web_name']}"
+                        )
+                    else:
+                        console.print(
+                            f"[cyan]\\[replan_transfer][/cyan]     ✓ Revised (attempt {count}): Hold"
+                        )
+                elif node_name == "select_captain":
+                    cap = node_output.get("captain_pick")
+                    console.print(
+                        f"[cyan]\\[select_captain][/cyan]      ✓ Captain: "
+                        f"{cap or 'stub (not implemented)'}"
+                    )
+                elif node_name == "explain_recommendation":
+                    console.print("[cyan]\\[explain][/cyan]              ✓ Done")
         console.print()
+    else:
+        result = await graph.ainvoke(initial_state)
 
     # Always show key outputs
     transfer = result.get("proposed_transfer")
@@ -190,9 +239,13 @@ def recommend(
     gw: int | None = typer.Option(None, "--gw", help="Target gameweek"),
     provider: str = typer.Option("openai", "--provider", help="LLM provider: openai or anthropic"),
     verbose: bool = typer.Option(False, "--verbose", help="Show graph execution trace"),
+    force_replan: bool = typer.Option(
+        False, "--force-replan",
+        help="Demo mode: force an invalid first proposal to exercise the replan loop end-to-end.",
+    ),
 ) -> None:
     """Generate a transfer and captaincy recommendation for the next gameweek."""
-    asyncio.run(_recommend(team_id, gw, provider, verbose))
+    asyncio.run(_recommend(team_id, gw, provider, verbose, force_replan))
 
 
 @app.command()

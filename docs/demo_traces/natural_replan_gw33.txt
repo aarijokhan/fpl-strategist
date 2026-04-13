@@ -1,0 +1,26 @@
+Natural run — recommend 44 --verbose (no forcing flag)
+Date: 2026-04-13, Gameweek 33
+Team: ID 44
+
+[fetch_context]        ✓ Squad loaded: 15 players, bank £1.2m, 2 FT, 80 candidates
+[analyze_and_propose]  ✓ Proposed: Semenyo → Beto
+[validate_constraints] ✗ VIOLATION:
+    Position mismatch: cannot replace MID with FWD.
+[replan_transfer]      ✓ Revised (attempt 1): Semenyo → Wieffer
+[validate_constraints] ✗ VIOLATION:
+    Team limit exceeded: BHA would have 4 players (max 3).
+[replan_transfer]      ✓ Revised (attempt 2): Semenyo → Bernardo
+[validate_constraints] ✓ All constraints passed
+[select_captain]       ✓ Captain: stub (not implemented)
+[explain]              ✓ Done
+
+Transfer: Semenyo → Bernardo
+Reasoning: I propose transferring out Semenyo (id=82) and bringing in Bernardo
+(id=416). This transfer keeps the formation intact as both players are
+midfielders while also avoiding the team limit violation with BHA...
+
+NOTE: This trace was produced naturally without the --force-replan flag.
+The LLM spontaneously hit two different violation types (position mismatch,
+team limit) and recovered to a valid proposal. Captured because this is the
+exact kind of trace the README demo GIF should show; gameweek-specific data
+will drift over time and this run would be hard to reproduce.
