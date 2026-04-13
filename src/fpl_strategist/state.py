@@ -18,6 +18,7 @@ class FPLState(TypedDict, total=False):
     # --- Inputs (set at invocation) ---
     team_id: int
     target_gw: int
+    provider: str  # "openai" or "anthropic", default "openai"
 
     # --- Data layer (set by fetch_context) ---
     current_squad: list[dict]       # 15 players enriched with form, fixtures, price

@@ -1,0 +1,316 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an expert Fantasy Premier
+      League analyst. You evaluate squads and propose one transfer (or hold) based
+      purely on football intelligence: form, fixtures, expected points, and tactical
+      fit.\\n\\n# Context\\nTarget gameweek: GW 30\\n\\n## Current Squad\\nName |
+      Pos | Team | Form | Price | EP Next | Fixture\\n--- | --- | --- | --- | ---
+      | --- | ---\\nAlisson | GKP | LIV | 5.0 | \xA35.5m | 4.5 | SOU(H) [2]\\nRaya
+      | GKP | ARS | 4.5 | \xA35.5m | 4.0 | MCI(H) [4]\\nAlexander-Arnold | DEF | LIV
+      | 6.0 | \xA38.5m | 5.5 | SOU(H) [2]\\nSaliba | DEF | ARS | 5.5 | \xA36.0m |
+      4.5 | MCI(H) [4]\\nGvardiol | DEF | MCI | 4.0 | \xA36.0m | 3.5 | ARS(A) [3]\\nEstupinan
+      | DEF | BHA | 3.0 | \xA35.0m | 2.5 | NFO(H) [2]\\nMitchell | DEF | CRY | 2.0
+      | \xA34.5m | 1.5 | BRE(A) [3]\\nSalah | MID | LIV | 8.5 | \xA313.0m | 7.0 |
+      SOU(H) [2]\\nPalmer | MID | CHE | 7.0 | \xA311.0m | 6.0 | BOU(H) [2]\\nSaka
+      | MID | ARS | 6.0 | \xA310.0m | 5.5 | MCI(H) [4]\\nMbeumo | MID | BRE | 5.0
+      | \xA37.5m | 4.5 | CRY(H) [2]\\nElanga | MID | NFO | 1.5 | \xA35.5m | 1.0 |
+      BHA(A) [3]\\nHaaland | FWD | MCI | 7.0 | \xA314.5m | 6.5 | ARS(A) [3]\\nWatkins
+      | FWD | AVL | 5.5 | \xA38.5m | 5.0 | NEW(H) [3]\\nSolanke | FWD | TOT | 4.0
+      | \xA37.5m | 3.5 | EVE(H) [2]\\n\\nBudget in bank: \xA32.5m | Free transfers:
+      1\\n\\n## Transfer Candidates (pre-filtered, grouped by position)\\n### GKP\\n
+      \ Flekken (id=110) | Form: 4.0 | EP: 3.5 | \xA34.5m | CRY(H) [2]\\n\\n### DEF\\n
+      \ Pedro Porro (id=210) | Form: 6.0 | EP: 5.0 | \xA35.5m | EVE(H) [2]\\n  Gabriel
+      (id=211) | Form: 5.0 | EP: 4.0 | \xA35.5m | MCI(H) [4]\\n  Mykolenko (id=212)
+      | Form: 4.0 | EP: 3.0 | \xA34.4m | TOT(A) [4]\\n\\n### MID\\n  Diaz (id=310)
+      | Form: 6.5 | EP: 6.0 | \xA38.0m | SOU(H) [2]\\n  Gordon (id=311) | Form: 5.5
+      | EP: 5.0 | \xA37.5m | AVL(A) [3]\\n  Rogers (id=312) | Form: 5.0 | EP: 4.5
+      | \xA35.5m | NEW(H) [3]\\n  Eze (id=313) | Form: 4.5 | EP: 4.0 | \xA37.0m |
+      BRE(A) [3]\\n\\n### FWD\\n  Isak (id=410) | Form: 7.5 | EP: 7.0 | \xA39.0m |
+      AVL(A) [3]\\n  Joao Pedro (id=412) | Form: 5.0 | EP: 4.5 | \xA36.0m | NFO(H)
+      [2]\\n  Welbeck (id=413) | Form: 4.5 | EP: 4.0 | \xA35.5m | NFO(H) [2]\\n\\n#
+      Task\\nAnalyse the squad above given current form and upcoming fixtures. Propose
+      ONE transfer (player out, player in) that most improves the squad for GW 30,
+      or recommend \\\"hold\\\" if no transfer is clearly beneficial.\\n\\nFocus on:\\n-
+      Players in the squad with poor form or tough upcoming fixtures \u2014 transfer
+      out\\n- Candidates with strong form and favourable fixtures \u2014 transfer
+      in\\n- Replace like-for-like (same position)\\n\\n# Rules\\nDo NOT check or
+      enforce any of the following \u2014 they are validated deterministically downstream
+      and are NOT your concern:\\n- Budget constraints (whether the user can afford
+      the transfer)\\n- Team limits (max 3 players per Premier League team)\\n- Squad
+      size or formation rules\\n- Player availability, injury status, or suspensions\\n\\nYour
+      ONLY job is football intelligence. Propose the best transfer on footballing
+      merit alone. The constraint engine will reject invalid proposals and ask you
+      to try again if needed.\\n\\n# Output format\\nReturn a JSON object with these
+      exact fields:\\n- action: \\\"transfer\\\" or \\\"hold\\\"\\n- player_out_id:
+      the squad player's ID to transfer out (null if hold)\\n- player_in_id: the candidate's
+      ID to bring in (null if hold)\\n- reasoning: 2-3 sentences explaining your footballing
+      logic\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Structured
+      output from analyze_and_propose and replan_transfer nodes.\",\"properties\":{\"action\":{\"enum\":[\"transfer\",\"hold\"],\"title\":\"Action\",\"type\":\"string\"},\"player_out_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      Out Id\"},\"player_in_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      In Id\"},\"reasoning\":{\"title\":\"Reasoning\",\"type\":\"string\"}},\"required\":[\"action\",\"player_out_id\",\"player_in_id\",\"reasoning\"],\"title\":\"TransferProposal\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"TransferProposal\",\"strict\":true}},\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4011'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Helper-Method:
+      - chat.completions.parse
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/41US2/bMAy+91cQuuySBHk1yXouChQbNmAPYNhSGLRMW2plyZPkplmR/z7Keblr
+        DzvYgPnx8ZH86OcLAKELcQVCKoyybszw+vtidTsJS3z4qX+om0U1u2knn79/uN9M6aMYpAiX35OM
+        x6iRdBxHUTu7h6UnjJSyTpbLxXhxuVwtOqB2BZkUVjVxOHfDWls9nI6n8+F4OZysDtHKaUmB3X7x
+        J8Bz9048bUFPbB4PjpaaQsCK2HZ0YqN3JlkEhqBDRBvF4AxKZyPZjvrzWqBMpNfiai2iRxtK8msx
+        WIvG4JZ85tqY6YLh2WR6tmp7NI7ZyK0GZ7WtuixfXEU+gA4gW++5kNkCZwFXQul8DRsdFTjLVrRA
+        Tw1PkQponLYxJKf56JKRAkqUnBIQomsrBaV+iq0nwAq1DRE+0UZiiIZGcGsh9eT5cwDXGv+AwgBB
+        uY2FKu2hV5hr6rrxPDT9SLA41OqYSDKG6b7FaTEaD7hGnWvL9n0iJvjoPOaGXnH7yv0qrJvo7Ai+
+        KR5F4BipONIYIKvQSoLccZqoCMLvFot3geulvWg0x8pbTabYEyz4gdpxEU9Gd1UxRpQPaUZRpS5H
+        a7Hr79lT2QZMWrOtMT0ArXUR09o7hd0dkN1JU8ZVjXd5+CdUlKzVoLL9vpN+QnSN6NAdv+867bYv
+        5Cg4EQ8ii+6BunKT2XK+TyjON9ODxwdpi8gcTQ+Yn+JepMwKiqhN6B2AkCgVFefY87VgW2jXAy56
+        jb/m81buk9j/J/0ZkJIa1lTG0iu0fNnz2c3TfSe9t91Og+4Ii0D+kf8SWdTk0zIKKrE1+1MXYRsi
+        1RlvjK+x8Xp/72WTzVY55jnO38/Fxe7iL8ssu3X9BAAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9eb8cca19e04941f-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Apr 2026 07:36:27 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '1702'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=p7VzFqFiIMiUAec8k2_hPcxz.TZx8uhMjKC_A62f54E-1776065782.0161273-1.0.1.1-ZRMIdFFWKef9yaqAke9_weDzwFbHr1rlRjKX6s10Yn2PoKygBWz8Pv1be4CS6rR58jqp446qtkUHAd9iGOgxsUxBu9Q2bUaeQ6i89UQ2cONiM9x0zxnnCQ950LLJ1vBg;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 13 Apr 2026
+        08:06:27 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '199194'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 241ms
+      x-request-id:
+      - req_15203b54d3d84af6a986c2cc97870e5b
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an expert Fantasy Premier
+      League analyst. You evaluate squads and propose one transfer (or hold) based
+      purely on football intelligence: form, fixtures, expected points, and tactical
+      fit.\\n\\n# Context\\nTarget gameweek: GW 30\\n\\n## Current Squad\\nName (id)
+      | Pos | Team | Form | Price | EP Next | Fixture\\n--- | --- | --- | --- | ---
+      | --- | ---\\nAlisson (id=100) | GKP | LIV | 5.0 | \xA35.5m | 4.5 | SOU(H) [2]\\nRaya
+      (id=101) | GKP | ARS | 4.5 | \xA35.5m | 4.0 | MCI(H) [4]\\nAlexander-Arnold
+      (id=200) | DEF | LIV | 6.0 | \xA38.5m | 5.5 | SOU(H) [2]\\nSaliba (id=201) |
+      DEF | ARS | 5.5 | \xA36.0m | 4.5 | MCI(H) [4]\\nGvardiol (id=202) | DEF | MCI
+      | 4.0 | \xA36.0m | 3.5 | ARS(A) [3]\\nEstupinan (id=203) | DEF | BHA | 3.0 |
+      \xA35.0m | 2.5 | NFO(H) [2]\\nMitchell (id=204) | DEF | CRY | 2.0 | \xA34.5m
+      | 1.5 | BRE(A) [3]\\nSalah (id=300) | MID | LIV | 8.5 | \xA313.0m | 7.0 | SOU(H)
+      [2]\\nPalmer (id=301) | MID | CHE | 7.0 | \xA311.0m | 6.0 | BOU(H) [2]\\nSaka
+      (id=302) | MID | ARS | 6.0 | \xA310.0m | 5.5 | MCI(H) [4]\\nMbeumo (id=303)
+      | MID | BRE | 5.0 | \xA37.5m | 4.5 | CRY(H) [2]\\nElanga (id=304) | MID | NFO
+      | 1.5 | \xA35.5m | 1.0 | BHA(A) [3]\\nHaaland (id=400) | FWD | MCI | 7.0 | \xA314.5m
+      | 6.5 | ARS(A) [3]\\nWatkins (id=401) | FWD | AVL | 5.5 | \xA38.5m | 5.0 | NEW(H)
+      [3]\\nSolanke (id=402) | FWD | TOT | 4.0 | \xA37.5m | 3.5 | EVE(H) [2]\\n\\nBudget
+      in bank: \xA32.5m | Free transfers: 1\\n\\n## Transfer Candidates (pre-filtered,
+      grouped by position)\\n### GKP\\n  Flekken (id=110) | Form: 4.0 | EP: 3.5 |
+      \xA34.5m | CRY(H) [2]\\n\\n### DEF\\n  Pedro Porro (id=210) | Form: 6.0 | EP:
+      5.0 | \xA35.5m | EVE(H) [2]\\n  Gabriel (id=211) | Form: 5.0 | EP: 4.0 | \xA35.5m
+      | MCI(H) [4]\\n  Mykolenko (id=212) | Form: 4.0 | EP: 3.0 | \xA34.4m | TOT(A)
+      [4]\\n\\n### MID\\n  Diaz (id=310) | Form: 6.5 | EP: 6.0 | \xA38.0m | SOU(H)
+      [2]\\n  Gordon (id=311) | Form: 5.5 | EP: 5.0 | \xA37.5m | AVL(A) [3]\\n  Rogers
+      (id=312) | Form: 5.0 | EP: 4.5 | \xA35.5m | NEW(H) [3]\\n  Eze (id=313) | Form:
+      4.5 | EP: 4.0 | \xA37.0m | BRE(A) [3]\\n\\n### FWD\\n  Isak (id=410) | Form:
+      7.5 | EP: 7.0 | \xA39.0m | AVL(A) [3]\\n  Joao Pedro (id=412) | Form: 5.0 |
+      EP: 4.5 | \xA36.0m | NFO(H) [2]\\n  Welbeck (id=413) | Form: 4.5 | EP: 4.0 |
+      \xA35.5m | NFO(H) [2]\\n\\n# Task\\nAnalyse the squad above given current form
+      and upcoming fixtures. Propose ONE transfer (player out, player in) that most
+      improves the squad for GW 30, or recommend \\\"hold\\\" if no transfer is clearly
+      beneficial.\\n\\nFocus on:\\n- Players in the squad with poor form or tough
+      upcoming fixtures \u2014 transfer out\\n- Candidates with strong form and favourable
+      fixtures \u2014 transfer in\\n- Replace like-for-like (same position)\\n\\n#
+      Rules\\nDo NOT check or enforce any of the following \u2014 they are validated
+      deterministically downstream and are NOT your concern:\\n- Budget constraints
+      (whether the user can afford the transfer)\\n- Team limits (max 3 players per
+      Premier League team)\\n- Squad size or formation rules\\n- Player availability,
+      injury status, or suspensions\\n\\nYour ONLY job is football intelligence. Propose
+      the best transfer on footballing merit alone. The constraint engine will reject
+      invalid proposals and ask you to try again if needed.\\n\\n# Output format\\nReturn
+      a JSON object with these exact fields:\\n- action: \\\"transfer\\\" or \\\"hold\\\"\\n-
+      player_out_id: the squad player's ID to transfer out (null if hold)\\n- player_in_id:
+      the candidate's ID to bring in (null if hold)\\n- reasoning: 2-3 sentences explaining
+      your footballing logic\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Structured
+      output from analyze_and_propose and replan_transfer nodes.\",\"properties\":{\"action\":{\"enum\":[\"transfer\",\"hold\"],\"title\":\"Action\",\"type\":\"string\"},\"player_out_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      Out Id\"},\"player_in_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      In Id\"},\"reasoning\":{\"title\":\"Reasoning\",\"type\":\"string\"}},\"required\":[\"action\",\"player_out_id\",\"player_in_id\",\"reasoning\"],\"title\":\"TransferProposal\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"TransferProposal\",\"strict\":true}},\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4151'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Helper-Method:
+      - chat.completions.parse
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAA/4xTy27bMBC8+ysWPMuG5PiVHIO2QJ8I+rrUgbAmVxIbihTIlR0j8L+Xkp3IaVKg
+        FwLa4YxmubMPIwChlbgCIStkWTdm/ObH4rL4pr5m7Zfvq/rd9c+dbOfNxw/Z90v5SSQdw21+k+RH
+        1kS6yCPWzh5h6QmZOtVsuVyki/lqmfVA7RSZjlY2PJ65ca2tHk/T6WycLsfZ6sSunJYU4rVf8RPg
+        oT87n1bRfSynyWOlphCwpFh7vBSL3pmuIjAEHRgti2QApbNMtrf+sBYoO9NrcbUW7NGGgvxaJGvR
+        GNyTz13LuVYRnqazoartqZilsRhbDc5qW/YqnzXLioyBCgMgGLeDwvkaXAHTSQpoVayya8sKcId7
+        KPQ9t54AS9Q2MFz7aC4yVAK7SssKdACj78jsIwv2moyCgnbQOG05TOC9ha4jj4ETuCHlHdw4H8/I
+        0xY2xEz+aAEZFtHCTnP8NxS4dR43hqByNb3w8XZLnp1NoMa72BtUOgrAFk3bc1Ap3b1cZ4orAkUF
+        2UCTtTicP7anog3YDdy2xpwBaK1j7BT6Md+ekMPTYI0rG+824S+qKGJgQpUfH70bYmDXiB49xPO2
+        D1D7LBMiCtUN5+zuqP9dNptPj4JiCO4Ar7ITyNGiOaPNLy6SVxRzRYzahLMQCokxBWrgDonFVml3
+        BozO+n5p5zXtp8D9j/wASElN3Mm88aS0fN7ycM1Tt9j/uvb0zr1hEchv46bmrMl3s4gpwNYc102E
+        fWCq8ziwknzj9XHniia/WG1ws8HZ5UyMDqM/AAAA//8DACoq9q+BBAAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9eb8cecc8e42c71e-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Apr 2026 07:37:52 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '1330'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=F3ihxDXUXcQk2oewovT7.xC1GtwW7A_t8oQ5PPQGsd4-1776065870.803557-1.0.1.1-Lo187ootFUgf.uYgw3PYvLY_H61bzXdy9naPFzadAzxxe72trRtWM4tK6Dr1u.wa8u7hkTjnbSBpUqVh85Y8s5ce8qcXrVE2ZQtJ0XYrApFZLGakqMaB9znpprnBenXP;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Mon, 13 Apr 2026
+        08:07:52 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '199159'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 252ms
+      x-request-id:
+      - req_ecb7f4fd81bf4d06a35f099417a8f858
+    status:
+      code: 200
+      message: OK
+version: 1

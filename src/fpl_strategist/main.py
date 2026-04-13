@@ -127,6 +127,63 @@ def inspect(
     asyncio.run(_inspect(team_id, gw))
 
 
+async def _recommend(team_id: int, gw: int | None, provider: str, verbose: bool) -> None:
+    from dotenv import load_dotenv
+
+    from fpl_strategist.graph import build_graph
+
+    load_dotenv()
+
+    # Auto-detect gameweek if needed
+    if gw is None:
+        async with FPLClient() as client:
+            gw_info = await client.get_next_gameweek()
+            if gw_info is None:
+                console.print("[red]No upcoming gameweek found — season may be over.[/red]")
+                raise typer.Exit(1)
+            gw = gw_info.id
+            console.print(f"Auto-detected next gameweek: [bold]GW {gw}[/bold]")
+
+    graph = build_graph()
+    initial_state = {
+        "team_id": team_id,
+        "target_gw": gw,
+        "provider": provider,
+    }
+
+    console.print(f"\n[bold]Running agent for team {team_id}, GW {gw}...[/bold]\n")
+
+    result = await graph.ainvoke(initial_state)
+
+    # Verbose: dump key state fields
+    if verbose:
+        console.print("[dim]--- State dump ---[/dim]")
+        for key in [
+            "proposed_transfer", "transfer_reasoning", "is_valid", "violations",
+            "replan_count", "captain_pick", "vice_captain_pick", "recommendation",
+        ]:
+            val = result.get(key)
+            console.print(f"  [cyan]{key}:[/cyan] {val}")
+        console.print()
+
+    # Always show key outputs
+    transfer = result.get("proposed_transfer")
+    reasoning = result.get("transfer_reasoning", "")
+
+    if transfer:
+        out_p = transfer["out"]
+        in_p = transfer["in"]
+        console.print(f"[bold green]Transfer:[/bold green] {out_p['web_name']} → {in_p['web_name']}")
+    else:
+        console.print("[bold yellow]Transfer:[/bold yellow] Hold (no transfer)")
+
+    console.print(f"[bold]Reasoning:[/bold] {reasoning}")
+
+    recommendation = result.get("recommendation")
+    if recommendation:
+        console.print(f"\n[bold]Full recommendation:[/bold]\n{recommendation}")
+
+
 @app.command()
 def recommend(
     team_id: int = typer.Argument(..., help="FPL team ID"),
@@ -135,10 +192,7 @@ def recommend(
     verbose: bool = typer.Option(False, "--verbose", help="Show graph execution trace"),
 ) -> None:
     """Generate a transfer and captaincy recommendation for the next gameweek."""
-    console.print(
-        f"[yellow]recommend command not yet implemented — coming in Phase 4[/yellow]\n"
-        f"Provider: {provider}, Team: {team_id}, GW: {gw or 'auto'}, Verbose: {verbose}"
-    )
+    asyncio.run(_recommend(team_id, gw, provider, verbose))
 
 
 @app.command()
