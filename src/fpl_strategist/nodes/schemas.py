@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class TransferProposal(BaseModel):
@@ -25,3 +25,9 @@ class CaptainPick(BaseModel):
     captain_id: int
     vice_captain_id: int
     reasoning: str
+
+    @model_validator(mode="after")
+    def captain_and_vice_must_differ(self) -> CaptainPick:
+        if self.captain_id == self.vice_captain_id:
+            raise ValueError("Captain and vice-captain must be different players.")
+        return self

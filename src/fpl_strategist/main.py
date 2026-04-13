@@ -205,10 +205,16 @@ async def _recommend(
                         )
                 elif node_name == "select_captain":
                     cap = node_output.get("captain_pick")
+                    vc = node_output.get("vice_captain_pick")
+                    cap_name = cap.get("name", "?") if isinstance(cap, dict) else str(cap)
+                    vc_name = vc.get("name", "?") if isinstance(vc, dict) else str(vc)
                     console.print(
                         f"[cyan]\\[select_captain][/cyan]      ✓ Captain: "
-                        f"{cap or 'stub (not implemented)'}"
+                        f"{cap_name}, Vice: {vc_name}"
                     )
+                    cap_reasoning = node_output.get("captain_reasoning", "")
+                    if cap_reasoning:
+                        console.print(f"[bold]Captain reasoning:[/bold] {cap_reasoning}")
                 elif node_name == "explain_recommendation":
                     console.print("[cyan]\\[explain][/cyan]              ✓ Done")
         console.print()

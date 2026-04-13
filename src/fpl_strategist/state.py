@@ -40,8 +40,9 @@ class FPLState(TypedDict, total=False):
     replan_count: int               # Incremented in replan_transfer node only, capped at 2
 
     # --- Captain (set by select_captain) ---
-    captain_pick: dict | None       # {"player_id": int, "name": str, "reasoning": str}
-    vice_captain_pick: dict | None
+    captain_pick: dict | None       # {"id": int, "name": str}
+    vice_captain_pick: dict | None  # {"id": int, "name": str}
+    captain_reasoning: str
 
     # --- Final output (set by explain_recommendation) ---
     recommendation: str
