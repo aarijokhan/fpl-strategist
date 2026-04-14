@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import sys
 from datetime import date, timezone, datetime
 from pathlib import Path
@@ -15,6 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import gradio as gr
+import httpx
 from gradio import ChatMessage
 
 from app_helpers import (
@@ -26,6 +29,10 @@ from app_helpers import (
 from fpl_strategist.data.fpl_client import FPLClient
 from fpl_strategist.graph import graph
 from fpl_strategist.llm import set_api_key_override
+
+# -- Cached demo fallback -----------------------------------------------------
+
+_DEMO_CACHE_PATH = Path(__file__).resolve().parent / "src" / "fpl_strategist" / "data" / "demo_cache.json"
 
 # -- Daily rate-limit (in-memory, resets on restart) --------------------------
 
@@ -142,6 +149,53 @@ def _format_explain(update: dict) -> str:
     return update.get("recommendation", "")
 
 
+# -- Cached demo fallback generator -------------------------------------------
+
+async def _replay_cached_demo():
+    """Replay demo_cache.json as a generator with the same yield shape as run_agent."""
+    with open(_DEMO_CACHE_PATH) as f:
+        cache = json.load(f)
+
+    gw = cache["gameweek"]
+    messages: list[ChatMessage] = []
+
+    # Warning banner
+    messages.append(ChatMessage(
+        role="assistant",
+        content=f"Live FPL API unavailable — showing a cached demo run from GW {gw}.",
+        metadata={"title": "Notice", "status": "done"},
+    ))
+    yield messages, "", "", "", "", ""
+
+    for event in cache["trace_events"]:
+        # Mark previous as done (the warning banner is already done)
+        if len(messages) > 1:
+            messages[-1].metadata["status"] = "done"
+
+        messages.append(ChatMessage(
+            role="assistant",
+            content=event["content"],
+            metadata={"title": event["title"], "status": "pending"},
+        ))
+        yield messages, "", "", "", "", ""
+        await asyncio.sleep(1.0)
+
+    # Final yield: mark last message done and populate right column
+    if messages:
+        messages[-1].metadata["status"] = "done"
+
+    fs = cache["final_state"]
+    recommendation = fs.get("recommendation", "")
+    yield (
+        messages,
+        recommendation,
+        build_squad_html(fs),
+        build_transfer_card(fs),
+        build_captain_card(fs),
+        build_meta_footer(fs),
+    )
+
+
 # -- Async generator that streams the graph -----------------------------------
 
 async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
@@ -172,86 +226,91 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
     # Set BYOK override (None clears it for hosted-key runs)
     set_api_key_override(byok_key.strip() if using_byok else None)
 
-    # Auto-detect next gameweek
-    async with FPLClient() as client:
-        gw_info = await client.get_next_gameweek()
-    if gw_info is None:
-        yield [ChatMessage(
-            role="assistant",
-            content="No upcoming gameweek found — the season may be over.",
-            metadata={"title": "Error", "status": "done"},
-        )], "", "", "", "", ""
-        return
-
-    target_gw = gw_info.id
-
-    initial_state = {
-        "team_id": int(team_id),
-        "target_gw": target_gw,
-        "provider": "openai",
-        "force_replan": force_replan,
-    }
-
-    messages: list[ChatMessage] = []
-    recommendation = ""
-    cumulative_state: dict = dict(initial_state)
-
-    async for event in graph.astream(initial_state):
-        # Each event is {node_name: state_update_dict}
-        for node_name, update in event.items():
-            if node_name.startswith("__"):
-                continue
-
-            # Accumulate state for final right-column build
-            cumulative_state.update(update)
-
-            # Mark previous message as done
-            if messages:
-                messages[-1].metadata["status"] = "done"
-
-            # Build card content based on node type
-            if node_name == "fetch_context":
-                title = NODE_TITLES[node_name]
-                content = _format_fetch_context(update)
-            elif node_name == "analyze_and_propose":
-                title = NODE_TITLES[node_name]
-                content = _format_analyze(update)
-            elif node_name == "validate_constraints":
-                title, content = _format_validate(update)
-            elif node_name == "replan_transfer":
-                count = update.get("replan_count", 1)
-                title = f"{NODE_TITLES[node_name]} (attempt {count})"
-                content = _format_replan(update)
-            elif node_name == "select_captain":
-                title = NODE_TITLES[node_name]
-                content = _format_captain(update)
-            elif node_name == "explain_recommendation":
-                title = NODE_TITLES[node_name]
-                content = _format_explain(update)
-                recommendation = update.get("recommendation", "")
-            else:
-                title = node_name
-                content = str(update)
-
-            messages.append(ChatMessage(
+    try:
+        # Auto-detect next gameweek
+        async with FPLClient() as client:
+            gw_info = await client.get_next_gameweek()
+        if gw_info is None:
+            yield [ChatMessage(
                 role="assistant",
-                content=content,
-                metadata={"title": title, "status": "pending"},
-            ))
+                content="No upcoming gameweek found — the season may be over.",
+                metadata={"title": "Error", "status": "done"},
+            )], "", "", "", "", ""
+            return
 
-            yield messages, recommendation, "", "", "", ""
+        target_gw = gw_info.id
 
-    # Mark final message as done and populate right column
-    if messages:
-        messages[-1].metadata["status"] = "done"
-        yield (
-            messages,
-            recommendation,
-            build_squad_html(cumulative_state),
-            build_transfer_card(cumulative_state),
-            build_captain_card(cumulative_state),
-            build_meta_footer(cumulative_state),
-        )
+        initial_state = {
+            "team_id": int(team_id),
+            "target_gw": target_gw,
+            "provider": "openai",
+            "force_replan": force_replan,
+        }
+
+        messages: list[ChatMessage] = []
+        recommendation = ""
+        cumulative_state: dict = dict(initial_state)
+
+        async for event in graph.astream(initial_state):
+            # Each event is {node_name: state_update_dict}
+            for node_name, update in event.items():
+                if node_name.startswith("__"):
+                    continue
+
+                # Accumulate state for final right-column build
+                cumulative_state.update(update)
+
+                # Mark previous message as done
+                if messages:
+                    messages[-1].metadata["status"] = "done"
+
+                # Build card content based on node type
+                if node_name == "fetch_context":
+                    title = NODE_TITLES[node_name]
+                    content = _format_fetch_context(update)
+                elif node_name == "analyze_and_propose":
+                    title = NODE_TITLES[node_name]
+                    content = _format_analyze(update)
+                elif node_name == "validate_constraints":
+                    title, content = _format_validate(update)
+                elif node_name == "replan_transfer":
+                    count = update.get("replan_count", 1)
+                    title = f"{NODE_TITLES[node_name]} (attempt {count})"
+                    content = _format_replan(update)
+                elif node_name == "select_captain":
+                    title = NODE_TITLES[node_name]
+                    content = _format_captain(update)
+                elif node_name == "explain_recommendation":
+                    title = NODE_TITLES[node_name]
+                    content = _format_explain(update)
+                    recommendation = update.get("recommendation", "")
+                else:
+                    title = node_name
+                    content = str(update)
+
+                messages.append(ChatMessage(
+                    role="assistant",
+                    content=content,
+                    metadata={"title": title, "status": "pending"},
+                ))
+
+                yield messages, recommendation, "", "", "", ""
+
+        # Mark final message as done and populate right column
+        if messages:
+            messages[-1].metadata["status"] = "done"
+            yield (
+                messages,
+                recommendation,
+                build_squad_html(cumulative_state),
+                build_transfer_card(cumulative_state),
+                build_captain_card(cumulative_state),
+                build_meta_footer(cumulative_state),
+            )
+
+    except (httpx.HTTPStatusError, httpx.ConnectError):
+        async for result in _replay_cached_demo():
+            yield result
 
 
 # -- Gradio layout ------------------------------------------------------------
