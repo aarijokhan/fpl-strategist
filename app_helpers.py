@@ -68,6 +68,13 @@ def build_squad_html(state: dict) -> str:
         '<span style="width:55px;text-align:right;margin-right:8px;">Price</span>'
         '<span style="width:70px;text-align:right;">Next</span>'
         '</div>',
+        '<div style="font-size:0.7em;opacity:0.4;padding:0 0 6px;'
+        'border-bottom:1px solid rgba(255,255,255,0.06);">'
+        '\U0001f7e2 Fit \u00a0\U0001f7e1 Doubt \u00a0\U0001f534 Out'
+        ' \u00a0\u00a0\u00b7\u00a0\u00a0 '
+        'Fixture difficulty: '
+        f'{_fdr_badge(2)} easy \u2192 {_fdr_badge(5)} hard'
+        '</div>',
     ]
     current_pos = None
 
