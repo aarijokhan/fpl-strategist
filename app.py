@@ -151,6 +151,9 @@ def _format_explain(update: dict) -> str:
     return update.get("recommendation", "")
 
 
+# Skip token — tells Gradio "don't touch this component on this yield"
+_S = gr.skip()
+
 # -- Cached demo fallback generator -------------------------------------------
 
 async def _replay_cached_demo():
@@ -167,7 +170,7 @@ async def _replay_cached_demo():
         content=f"Live FPL API unavailable — showing a cached demo from the 2023/24 season (GW {gw}).",
         metadata={"title": "Notice", "status": "done"},
     ))
-    yield messages, "", "", "", "", "", ""
+    yield messages, _S, _S, _S, _S, _S, _S
 
     for event in cache["trace_events"]:
         # Mark previous as done (the warning banner is already done)
@@ -179,7 +182,7 @@ async def _replay_cached_demo():
             content=event["content"],
             metadata={"title": event["title"], "status": "pending"},
         ))
-        yield messages, "", "", "", "", "", ""
+        yield messages, _S, _S, _S, _S, _S, _S
         await asyncio.sleep(1.0)
 
     # Final yield: mark last message done and populate right column
@@ -300,7 +303,7 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                     metadata={"title": title, "status": "pending"},
                 ))
 
-                yield messages, "", recommendation, "", "", "", ""
+                yield messages, _S, recommendation, _S, _S, _S, _S
 
         # Mark final message as done and populate right column
         if messages:
