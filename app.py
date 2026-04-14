@@ -240,10 +240,8 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
         async with FPLClient() as client:
             gw_info = await client.get_next_gameweek()
         if gw_info is None:
-            yield _error_yield(
-                "Error",
-                "No upcoming gameweek found — the season may be over.",
-            )
+            async for result in _replay_cached_demo():
+                yield result
             return
 
         target_gw = gw_info.id
@@ -321,7 +319,19 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
         if not using_byok:
             _increment_daily_runs()
 
-    except (httpx.HTTPStatusError, httpx.ConnectError):
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            yield _error_yield(
+                "Team not found",
+                f"No FPL team found for ID **{int(team_id)}**. "
+                "Check yours at fantasy.premierleague.com \u2192 My Team "
+                "\u2192 number in the URL.",
+            )
+        else:
+            async for result in _replay_cached_demo():
+                yield result
+
+    except httpx.ConnectError:
         async for result in _replay_cached_demo():
             yield result
 
