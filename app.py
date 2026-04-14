@@ -24,6 +24,7 @@ from app_helpers import (
     build_captain_card,
     build_meta_footer,
     build_squad_html,
+    build_summary_headline,
     build_transfer_card,
 )
 from fpl_strategist.data.fpl_client import FPLClient
@@ -38,7 +39,7 @@ _DEMO_CACHE_PATH = Path(__file__).resolve().parent / "src" / "fpl_strategist" / 
 
 _daily_runs = 0
 _day_start: date | None = None
-_DAILY_CAP = 200
+_DAILY_CAP = 50
 
 
 def _check_daily_cap() -> str | None:
@@ -50,7 +51,7 @@ def _check_daily_cap() -> str | None:
         _day_start = today
     if _daily_runs >= _DAILY_CAP:
         return (
-            "Daily limit of 200 runs reached. Please try again tomorrow, "
+            "Daily limit of 50 runs reached. Please try again tomorrow, "
             "or use your own OpenAI API key below for unlimited runs."
         )
     return None
@@ -165,7 +166,7 @@ async def _replay_cached_demo():
         content=f"Live FPL API unavailable — showing a cached demo run from GW {gw}.",
         metadata={"title": "Notice", "status": "done"},
     ))
-    yield messages, "", "", "", "", ""
+    yield messages, "", "", "", "", "", ""
 
     for event in cache["trace_events"]:
         # Mark previous as done (the warning banner is already done)
@@ -177,7 +178,7 @@ async def _replay_cached_demo():
             content=event["content"],
             metadata={"title": event["title"], "status": "pending"},
         ))
-        yield messages, "", "", "", "", ""
+        yield messages, "", "", "", "", "", ""
         await asyncio.sleep(1.0)
 
     # Final yield: mark last message done and populate right column
@@ -188,11 +189,12 @@ async def _replay_cached_demo():
     recommendation = fs.get("recommendation", "")
     yield (
         messages,
+        build_summary_headline(fs),
         recommendation,
-        build_squad_html(fs),
         build_transfer_card(fs),
         build_captain_card(fs),
         build_meta_footer(fs),
+        build_squad_html(fs),
     )
 
 
@@ -219,7 +221,7 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                 role="assistant",
                 content=cap_error,
                 metadata={"title": "Daily limit reached", "status": "done"},
-            )], "", "", "", "", ""
+            )], "", "", "", "", "", ""
             return
         _increment_daily_runs()
 
@@ -235,7 +237,7 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                 role="assistant",
                 content="No upcoming gameweek found — the season may be over.",
                 metadata={"title": "Error", "status": "done"},
-            )], "", "", "", "", ""
+            )], "", "", "", "", "", ""
             return
 
         target_gw = gw_info.id
@@ -294,18 +296,19 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                     metadata={"title": title, "status": "pending"},
                 ))
 
-                yield messages, recommendation, "", "", "", ""
+                yield messages, "", recommendation, "", "", "", ""
 
         # Mark final message as done and populate right column
         if messages:
             messages[-1].metadata["status"] = "done"
             yield (
                 messages,
+                build_summary_headline(cumulative_state),
                 recommendation,
-                build_squad_html(cumulative_state),
                 build_transfer_card(cumulative_state),
                 build_captain_card(cumulative_state),
                 build_meta_footer(cumulative_state),
+                build_squad_html(cumulative_state),
             )
 
     except (httpx.HTTPStatusError, httpx.ConnectError):
@@ -324,11 +327,18 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
     )
 
     with gr.Row():
-        team_id = gr.Number(label="Team ID", value=44, precision=0)
-        force_replan = gr.Checkbox(label="Force replan (demo mode)", value=False)
+        team_id = gr.Number(
+            label="Team ID", value=44, precision=0,
+            info="Find yours at fantasy.premierleague.com → My Team → number in the URL",
+        )
         run_btn = gr.Button("Get Recommendation", variant="primary")
 
     with gr.Accordion("Advanced", open=False):
+        force_replan = gr.Checkbox(
+            label="Simulate constraint violation",
+            value=False,
+            info="Forces an over-budget proposal to demonstrate the replan loop.",
+        )
         byok_key = gr.Textbox(
             label="OpenAI API Key (optional)",
             type="password",
@@ -342,18 +352,19 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
 
     with gr.Row():
         with gr.Column(scale=2):
-            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=360)
+            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=280)
+            summary_md = gr.Markdown()
             recommendation_md = gr.Markdown(label="Recommendation")
         with gr.Column(scale=1):
-            squad_table = gr.HTML(label="Post-Transfer Squad")
             transfer_card = gr.Markdown()
             captain_card = gr.Markdown()
             meta_footer = gr.Markdown()
+            squad_table = gr.HTML(label="Post-Transfer Squad")
 
     run_btn.click(
         fn=run_agent,
         inputs=[team_id, force_replan, byok_key],
-        outputs=[chatbot, recommendation_md, squad_table, transfer_card, captain_card, meta_footer],
+        outputs=[chatbot, summary_md, recommendation_md, transfer_card, captain_card, meta_footer, squad_table],
         concurrency_limit=1,
     )
 

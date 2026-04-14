@@ -7,7 +7,15 @@ No LLM calls, no API calls, no side effects.
 from __future__ import annotations
 
 POS_SORT = {"GKP": 0, "DEF": 1, "MID": 2, "FWD": 3}
+POS_LABELS = {0: "GKP", 1: "DEF", 2: "MID", 3: "FWD"}
 STATUS_MAP = {"a": "\U0001f7e2", "d": "\U0001f7e1"}
+FDR_COLORS = {
+    1: "#00ff87",  # bright green
+    2: "#00ff87",
+    3: "#ebeb00",  # amber-yellow
+    4: "#ff5a5a",  # red
+    5: "#8b0000",  # dark red
+}
 
 
 def _build_post_transfer_squad(state: dict) -> tuple[list[dict], int | None]:
@@ -26,8 +34,23 @@ def _build_post_transfer_squad(state: dict) -> tuple[list[dict], int | None]:
     return squad, in_player["id"]
 
 
+def _fdr_badge(difficulty) -> str:
+    """Inline colored badge for fixture difficulty rating."""
+    try:
+        diff = int(difficulty)
+    except (ValueError, TypeError):
+        return str(difficulty)
+    color = FDR_COLORS.get(diff, "#aaa")
+    text_color = "#000" if diff <= 3 else "#fff"
+    return (
+        f'<span style="background:{color};color:{text_color};'
+        f'padding:1px 5px;border-radius:3px;font-size:0.8em;'
+        f'font-weight:600;">{diff}</span>'
+    )
+
+
 def build_squad_html(state: dict) -> str:
-    """HTML card list of the post-transfer squad sorted by position then name."""
+    """Compact squad table grouped by position with fixture color coding."""
     squad, transferred_in_id = _build_post_transfer_squad(state)
 
     # Sort by position order, then alphabetically by name
@@ -36,8 +59,20 @@ def build_squad_html(state: dict) -> str:
         p["web_name"],
     ))
 
-    cards: list[str] = []
+    rows: list[str] = []
+    current_pos = None
+
     for p in squad:
+        pos_order = POS_SORT.get(p.get("position_name", "UNK"), 9)
+        if pos_order != current_pos:
+            current_pos = pos_order
+            label = POS_LABELS.get(pos_order, "OTHER")
+            rows.append(
+                f'<div style="font-size:0.75em;font-weight:700;opacity:0.5;'
+                f'padding:6px 0 2px;text-transform:uppercase;letter-spacing:0.05em;">'
+                f'{label}</div>'
+            )
+
         name = p["web_name"]
         if transferred_in_id is not None and p["id"] == transferred_in_id:
             name = f"\U0001f504 {name}"
@@ -46,32 +81,30 @@ def build_squad_html(state: dict) -> str:
         opp = fix.get("opponent", "?")
         loc = "H" if fix.get("is_home") else "A"
         diff = fix.get("difficulty", "?")
-        next_str = f"{opp} ({loc}, {diff})"
 
         status = STATUS_MAP.get(p.get("status", "a"), "\U0001f534")
-        pos = p.get("position_name", "UNK")
         team = p.get("team_name", "?")
         form = p.get("form", "0.0")
         price = f"\u00a3{p['now_cost'] / 10:.1f}m"
 
-        cards.append(
-            '<div style="padding:8px 12px;border-radius:6px;'
-            'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">'
-            '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
-            f'<span style="font-weight:600;">{status} {name}</span>'
-            f'<span style="font-variant-numeric:tabular-nums;">{price}</span>'
-            '</div>'
-            '<div style="display:flex;justify-content:space-between;font-size:0.85em;'
-            f'opacity:0.7;margin-top:2px;">'
-            f'<span>{pos} \u00b7 {team} \u00b7 form {form}</span>'
-            f'<span>{next_str}</span>'
-            '</div>'
+        rows.append(
+            '<div style="display:flex;align-items:center;justify-content:space-between;'
+            'padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.06);'
+            'font-size:0.9em;">'
+            f'<span style="flex:1;min-width:0;">{status} <b>{name}</b>'
+            f' <span style="opacity:0.5;">{team}</span></span>'
+            f'<span style="width:45px;text-align:right;font-variant-numeric:tabular-nums;'
+            f'opacity:0.7;margin-right:8px;">{form}</span>'
+            f'<span style="width:55px;text-align:right;font-variant-numeric:tabular-nums;'
+            f'margin-right:8px;">{price}</span>'
+            f'<span style="width:70px;text-align:right;white-space:nowrap;">'
+            f'{opp}({loc}) {_fdr_badge(diff)}</span>'
             '</div>'
         )
 
     return (
-        '<div style="display:flex;flex-direction:column;gap:6px;">'
-        + "".join(cards)
+        '<div style="display:flex;flex-direction:column;">'
+        + "".join(rows)
         + '</div>'
     )
 
@@ -84,7 +117,7 @@ def build_transfer_card(state: dict) -> str:
     if transfer is None:
         md = "### Transfer\n**No transfer this gameweek.**"
         if reasoning:
-            md += f"\n\n> {reasoning}"
+            md += f"\n\n*{reasoning}*"
         return md
 
     out_p = transfer["out"]
@@ -107,7 +140,7 @@ def build_transfer_card(state: dict) -> str:
     )
 
     if reasoning:
-        md += f"\n\n> {reasoning}"
+        md += f"\n\n*{reasoning}*"
 
     return md
 
@@ -141,9 +174,23 @@ def build_captain_card(state: dict) -> str:
     )
 
     if reasoning:
-        md += f"\n\n> {reasoning}"
+        md += f"\n\n*{reasoning}*"
 
     return md
+
+
+def build_summary_headline(state: dict) -> str:
+    """Bold one-liner: Transfer: X -> Y | Captain: Z."""
+    transfer = state.get("proposed_transfer")
+    cap = state.get("captain_pick") or {}
+
+    if transfer is None:
+        transfer_str = "No transfer"
+    else:
+        transfer_str = f"{transfer['out']['web_name']} \u2192 {transfer['in']['web_name']}"
+
+    cap_name = cap.get("name", "TBD")
+    return f"**Transfer:** {transfer_str} **|** **Captain:** {cap_name} (C)"
 
 
 def build_meta_footer(state: dict) -> str:
