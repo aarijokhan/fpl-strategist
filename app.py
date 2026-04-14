@@ -164,7 +164,7 @@ async def _replay_cached_demo():
     # Warning banner
     messages.append(ChatMessage(
         role="assistant",
-        content=f"Live FPL API unavailable — showing a cached demo run from GW {gw}.",
+        content=f"Live FPL API unavailable — showing a cached demo from the 2023/24 season (GW {gw}).",
         metadata={"title": "Notice", "status": "done"},
     ))
     yield messages, "", "", "", "", "", ""

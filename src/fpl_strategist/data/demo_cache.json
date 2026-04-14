@@ -89,6 +89,7 @@
       {"id": 179, "web_name": "Saka", "element_type": 3, "team": 1, "team_name": "ARS", "now_cost": 97, "form": "3.5", "position_name": "MID", "status": "d", "fixture": {"opponent": "AVL", "is_home": false, "difficulty": 4}},
       {"id": 519, "web_name": "Solanke", "element_type": 4, "team": 18, "team_name": "TOT", "now_cost": 71, "form": "2.5", "position_name": "FWD", "status": "a", "fixture": {"opponent": "NEW", "is_home": false, "difficulty": 4}}
     ],
+    "target_gw": 33,
     "bank": 12,
     "free_transfers": 2
   }
