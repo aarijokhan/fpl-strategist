@@ -25,6 +25,7 @@ from app_helpers import (
 )
 from fpl_strategist.data.fpl_client import FPLClient
 from fpl_strategist.graph import graph
+from fpl_strategist.llm import set_api_key_override
 
 # -- Daily rate-limit (in-memory, resets on restart) --------------------------
 
@@ -143,7 +144,7 @@ def _format_explain(update: dict) -> str:
 
 # -- Async generator that streams the graph -----------------------------------
 
-async def run_agent(team_id: int, force_replan: bool):
+async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
     """Async generator that streams the graph execution as ChatMessage cards.
 
     Yields 6-tuples:
@@ -154,17 +155,22 @@ async def run_agent(team_id: int, force_replan: bool):
     On the final yield, all six populate from the accumulated state.
     """
 
-    # --- Daily cap (hosted key only) ---
-    cap_error = _check_daily_cap()
-    if cap_error is not None:
-        yield [ChatMessage(
-            role="assistant",
-            content=cap_error,
-            metadata={"title": "Daily limit reached", "status": "done"},
-        )], "", "", "", "", ""
-        return
+    using_byok = bool(byok_key and byok_key.strip())
 
-    _increment_daily_runs()
+    # --- Daily cap (hosted key only) ---
+    if not using_byok:
+        cap_error = _check_daily_cap()
+        if cap_error is not None:
+            yield [ChatMessage(
+                role="assistant",
+                content=cap_error,
+                metadata={"title": "Daily limit reached", "status": "done"},
+            )], "", "", "", "", ""
+            return
+        _increment_daily_runs()
+
+    # Set BYOK override (None clears it for hosted-key runs)
+    set_api_key_override(byok_key.strip() if using_byok else None)
 
     # Auto-detect next gameweek
     async with FPLClient() as client:
@@ -263,6 +269,18 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
         force_replan = gr.Checkbox(label="Force replan (demo mode)", value=False)
         run_btn = gr.Button("Get Recommendation", variant="primary")
 
+    with gr.Accordion("Advanced", open=False):
+        byok_key = gr.Textbox(
+            label="OpenAI API Key (optional)",
+            type="password",
+            placeholder="sk-...",
+        )
+        gr.Markdown(
+            "Your key is used only for this session — never stored or logged. "
+            "[Source code on GitHub](https://github.com/aarij-anwer/fpl-strategist) "
+            "for verification."
+        )
+
     with gr.Row():
         with gr.Column(scale=2):
             chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=360)
@@ -275,7 +293,7 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
 
     run_btn.click(
         fn=run_agent,
-        inputs=[team_id, force_replan],
+        inputs=[team_id, force_replan, byok_key],
         outputs=[chatbot, recommendation_md, squad_table, transfer_card, captain_card, meta_footer],
         concurrency_limit=1,
     )

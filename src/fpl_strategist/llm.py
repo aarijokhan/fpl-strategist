@@ -13,19 +13,35 @@ import os
 from langchain_core.language_models import BaseChatModel
 
 
+_api_key_override: str | None = None
+
+
+def set_api_key_override(key: str | None) -> None:
+    """Set a per-run API key override (used by BYOK in the web UI).
+
+    With concurrency_limit=1 on the Gradio handler, only one graph
+    executes at a time, so a module-level variable is safe.
+    """
+    global _api_key_override
+    _api_key_override = key
+
+
 def get_chat_model(
     model: str = "gpt-4o",
     provider: str = "openai",
+    api_key: str | None = None,
 ) -> BaseChatModel:
     """Create a chat model with optional Langfuse tracing.
 
     Args:
         model: Model name/ID (e.g. "gpt-4o", "claude-sonnet-4-20250514").
         provider: "openai" or "anthropic".
+        api_key: Explicit API key. Falls back to _api_key_override, then env.
 
     Returns:
         A configured BaseChatModel instance.
     """
+    key = api_key or _api_key_override
     callbacks = _build_callbacks()
 
     if provider == "anthropic":
@@ -33,11 +49,17 @@ def get_chat_model(
 
         if model == "gpt-4o":
             model = "claude-sonnet-4-20250514"
-        return ChatAnthropic(model=model, callbacks=callbacks)
+        kwargs: dict = {"model": model, "callbacks": callbacks}
+        if key:
+            kwargs["api_key"] = key
+        return ChatAnthropic(**kwargs)
 
     from langchain_openai import ChatOpenAI
 
-    return ChatOpenAI(model=model, callbacks=callbacks)
+    kwargs = {"model": model, "callbacks": callbacks}
+    if key:
+        kwargs["api_key"] = key
+    return ChatOpenAI(**kwargs)
 
 
 def _build_callbacks() -> list | None:
