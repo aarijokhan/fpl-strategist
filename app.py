@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import date, timezone, datetime
 from pathlib import Path
 
 # Ensure src/ is on the import path (needed when running as `python app.py`
@@ -24,6 +25,32 @@ from app_helpers import (
 )
 from fpl_strategist.data.fpl_client import FPLClient
 from fpl_strategist.graph import graph
+
+# -- Daily rate-limit (in-memory, resets on restart) --------------------------
+
+_daily_runs = 0
+_day_start: date | None = None
+_DAILY_CAP = 200
+
+
+def _check_daily_cap() -> str | None:
+    """Return an error message if the daily cap is exceeded, else None."""
+    global _daily_runs, _day_start
+    today = datetime.now(timezone.utc).date()
+    if _day_start != today:
+        _daily_runs = 0
+        _day_start = today
+    if _daily_runs >= _DAILY_CAP:
+        return (
+            "Daily limit of 200 runs reached. Please try again tomorrow, "
+            "or use your own OpenAI API key below for unlimited runs."
+        )
+    return None
+
+
+def _increment_daily_runs() -> None:
+    global _daily_runs
+    _daily_runs += 1
 
 
 # -- Node-to-card formatting helpers ------------------------------------------
@@ -126,6 +153,18 @@ async def run_agent(team_id: int, force_replan: bool):
     During streaming, only trace_messages and recommendation_text update.
     On the final yield, all six populate from the accumulated state.
     """
+
+    # --- Daily cap (hosted key only) ---
+    cap_error = _check_daily_cap()
+    if cap_error is not None:
+        yield [ChatMessage(
+            role="assistant",
+            content=cap_error,
+            metadata={"title": "Daily limit reached", "status": "done"},
+        )], "", "", "", "", ""
+        return
+
+    _increment_daily_runs()
 
     # Auto-detect next gameweek
     async with FPLClient() as client:
@@ -238,6 +277,7 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
         fn=run_agent,
         inputs=[team_id, force_replan],
         outputs=[chatbot, recommendation_md, squad_table, transfer_card, captain_card, meta_footer],
+        concurrency_limit=1,
     )
 
 demo.queue()
