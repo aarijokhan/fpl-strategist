@@ -16,6 +16,12 @@ load_dotenv()
 import gradio as gr
 from gradio import ChatMessage
 
+from app_helpers import (
+    build_captain_card,
+    build_meta_footer,
+    build_squad_html,
+    build_transfer_card,
+)
 from fpl_strategist.data.fpl_client import FPLClient
 from fpl_strategist.graph import graph
 
@@ -113,8 +119,14 @@ def _format_explain(update: dict) -> str:
 async def run_agent(team_id: int, force_replan: bool):
     """Async generator that streams the graph execution as ChatMessage cards.
 
-    Yields (messages, recommendation_str) tuples.
+    Yields 6-tuples:
+      (trace_messages, recommendation_text, squad_html, transfer_card_md,
+       captain_card_md, meta_md)
+
+    During streaming, only trace_messages and recommendation_text update.
+    On the final yield, all six populate from the accumulated state.
     """
+
     # Auto-detect next gameweek
     async with FPLClient() as client:
         gw_info = await client.get_next_gameweek()
@@ -123,7 +135,7 @@ async def run_agent(team_id: int, force_replan: bool):
             role="assistant",
             content="No upcoming gameweek found — the season may be over.",
             metadata={"title": "Error", "status": "done"},
-        )], ""
+        )], "", "", "", "", ""
         return
 
     target_gw = gw_info.id
@@ -137,12 +149,16 @@ async def run_agent(team_id: int, force_replan: bool):
 
     messages: list[ChatMessage] = []
     recommendation = ""
+    cumulative_state: dict = dict(initial_state)
 
     async for event in graph.astream(initial_state):
         # Each event is {node_name: state_update_dict}
         for node_name, update in event.items():
             if node_name.startswith("__"):
                 continue
+
+            # Accumulate state for final right-column build
+            cumulative_state.update(update)
 
             # Mark previous message as done
             if messages:
@@ -178,12 +194,19 @@ async def run_agent(team_id: int, force_replan: bool):
                 metadata={"title": title, "status": "pending"},
             ))
 
-            yield messages, recommendation
+            yield messages, recommendation, "", "", "", ""
 
-    # Mark final message as done
+    # Mark final message as done and populate right column
     if messages:
         messages[-1].metadata["status"] = "done"
-        yield messages, recommendation
+        yield (
+            messages,
+            recommendation,
+            build_squad_html(cumulative_state),
+            build_transfer_card(cumulative_state),
+            build_captain_card(cumulative_state),
+            build_meta_footer(cumulative_state),
+        )
 
 
 # -- Gradio layout ------------------------------------------------------------
@@ -203,15 +226,18 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
 
     with gr.Row():
         with gr.Column(scale=2):
-            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=600)
+            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=360)
             recommendation_md = gr.Markdown(label="Recommendation")
         with gr.Column(scale=1):
-            gr.Markdown("_Squad and recommendation details will appear here in Step 5.3_")
+            squad_table = gr.HTML(label="Post-Transfer Squad")
+            transfer_card = gr.Markdown()
+            captain_card = gr.Markdown()
+            meta_footer = gr.Markdown()
 
     run_btn.click(
         fn=run_agent,
         inputs=[team_id, force_replan],
-        outputs=[chatbot, recommendation_md],
+        outputs=[chatbot, recommendation_md, squad_table, transfer_card, captain_card, meta_footer],
     )
 
 demo.queue()
