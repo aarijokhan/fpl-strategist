@@ -18,6 +18,7 @@ load_dotenv()
 
 import gradio as gr
 import httpx
+import openai
 from gradio import ChatMessage
 
 from app_helpers import (
@@ -223,21 +224,26 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                 metadata={"title": "Daily limit reached", "status": "done"},
             )], "", "", "", "", "", ""
             return
-        _increment_daily_runs()
 
     # Set BYOK override (None clears it for hosted-key runs)
     set_api_key_override(byok_key.strip() if using_byok else None)
+
+    def _error_yield(title: str, content: str):
+        return [ChatMessage(
+            role="assistant",
+            content=content,
+            metadata={"title": title, "status": "done"},
+        )], "", "", "", "", "", ""
 
     try:
         # Auto-detect next gameweek
         async with FPLClient() as client:
             gw_info = await client.get_next_gameweek()
         if gw_info is None:
-            yield [ChatMessage(
-                role="assistant",
-                content="No upcoming gameweek found — the season may be over.",
-                metadata={"title": "Error", "status": "done"},
-            )], "", "", "", "", "", ""
+            yield _error_yield(
+                "Error",
+                "No upcoming gameweek found — the season may be over.",
+            )
             return
 
         target_gw = gw_info.id
@@ -311,9 +317,37 @@ async def run_agent(team_id: int, force_replan: bool, byok_key: str = ""):
                 build_squad_html(cumulative_state),
             )
 
+        # Only count successful runs against the daily cap
+        if not using_byok:
+            _increment_daily_runs()
+
     except (httpx.HTTPStatusError, httpx.ConnectError):
         async for result in _replay_cached_demo():
             yield result
+
+    except openai.AuthenticationError:
+        yield _error_yield(
+            "\u26a0\ufe0f API key rejected",
+            "The OpenAI API rejected the provided key. If you pasted a custom "
+            "key in the Advanced section, please verify it starts with `sk-` "
+            "and is still active. Otherwise, remove the custom key to use the "
+            "hosted key.",
+        )
+
+    except openai.RateLimitError:
+        yield _error_yield(
+            "\u26a0\ufe0f Rate limit",
+            "Rate limit reached on the OpenAI API. Please wait a moment and "
+            "try again, or use your own API key in Advanced.",
+        )
+
+    except Exception:
+        yield _error_yield(
+            "\u26a0\ufe0f Something went wrong",
+            "An unexpected error occurred while running the agent. Please try "
+            "again. If the problem persists, check back later or use your own "
+            "API key in Advanced.",
+        )
 
 
 # -- Gradio layout ------------------------------------------------------------
