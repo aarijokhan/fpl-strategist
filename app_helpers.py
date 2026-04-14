@@ -59,7 +59,16 @@ def build_squad_html(state: dict) -> str:
         p["web_name"],
     ))
 
-    rows: list[str] = []
+    rows: list[str] = [
+        '<div style="display:flex;align-items:center;justify-content:space-between;'
+        'padding:2px 0 6px;font-size:0.75em;opacity:0.45;font-weight:600;'
+        'text-transform:uppercase;letter-spacing:0.04em;">'
+        '<span style="flex:1;">Player</span>'
+        '<span style="width:45px;text-align:right;margin-right:8px;">Form</span>'
+        '<span style="width:55px;text-align:right;margin-right:8px;">Price</span>'
+        '<span style="width:70px;text-align:right;">Next</span>'
+        '</div>',
+    ]
     current_pos = None
 
     for p in squad:
