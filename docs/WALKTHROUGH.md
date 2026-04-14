@@ -116,6 +116,8 @@ Player costs are stored in tenths. A player priced at £10.0m has `now_cost = 10
 
 Selling price is not the same as buying price. FPL uses a profit-sharing formula for selling. The exact selling price requires reconstructing the full transfer history, which is beyond the MVP. The client uses `now_cost` as an approximation. This is a known inaccuracy, documented and accepted.
 
+Fixture difficulty ratings come from the official FPL API, not from a model I built. They are set by the Premier League's FPL team based on overall team strength and home/away advantage. They do not update dynamically based on recent form. A team on a ten-game losing streak still carries the same FDR it was assigned at calibration time. The UI displays these ratings with color coding (green for easy, red for hard), but the underlying numbers are upstream data, not a prediction. A future improvement could replace FDR with a custom difficulty score derived from rolling xG data.
+
 ---
 
 ## 4. Phase 2: Constraint Engine
@@ -235,68 +237,249 @@ I also expected LangGraph's `add_conditional_edges` to accept a simple function 
 
 ### 6.1 What I built
 
-> TODO: write this section.
+`nodes/schemas.py` — two Pydantic models, `TransferProposal` and `CaptainPick`, used as structured output schemas for every LLM node that returns data. `nodes/analyze.py` — the first LLM node, which evaluates the squad and proposes one transfer. `nodes/replan.py` — the correction node, which sees the violation list and proposes a different transfer. `nodes/select_captain.py` — picks captain and vice-captain from the post-transfer squad. `nodes/explain.py` — synthesizes everything into a natural-language recommendation. `llm.py` — factory function that returns a configured `ChatOpenAI` or `ChatAnthropic` with optional Langfuse tracing.
 
 ### 6.2 Why it exists
 
-> TODO: write this section.
+Phase 3 proved the graph works with canned data. Phase 4 replaces the canned data with real LLM calls. The separation matters because it means Phase 4 only had to get the prompts right — the routing, the replan loop, and the fallback behavior were already tested.
 
 ### 6.3 Key concepts
 
-> TODO: write this section.
+**Structured output via Pydantic.** Every LLM node that returns data uses `with_structured_output()` with a Pydantic model:
+
+```python
+structured_llm = llm.with_structured_output(TransferProposal)
+result: TransferProposal = await structured_llm.ainvoke([HumanMessage(content=prompt)])
+```
+
+The LLM is instructed to return JSON matching the schema. LangChain parses and validates the response automatically. If the LLM returns malformed JSON, the structured output wrapper retries. This eliminates manual JSON parsing.
+
+`CaptainPick` goes further with a model-level validator:
+
+```python
+class CaptainPick(BaseModel):
+    captain_id: int
+    vice_captain_id: int
+    reasoning: str
+
+    @model_validator(mode="after")
+    def captain_and_vice_must_differ(self) -> CaptainPick:
+        if self.captain_id == self.vice_captain_id:
+            raise ValueError("Captain and vice-captain must be different players.")
+        return self
+```
+
+If the LLM returns the same player for both captain and vice-captain, Pydantic rejects the response before the node ever sees it.
+
+**Prompt responsibility boundaries.** The analyze prompt explicitly disclaims responsibility for constraints:
+
+```
+Do NOT check or enforce any of the following — they are validated
+deterministically downstream and are NOT your concern:
+- Budget constraints
+- Team limits (max 3 players per Premier League team)
+- Squad size or formation rules
+- Player availability, injury status, or suspensions
+```
+
+This is not politeness. If the LLM tries to enforce budget rules, it will reject good candidates prematurely and the replan loop will never fire. The whole architecture depends on the LLM proposing on footballing merit alone and the deterministic validator catching mistakes.
+
+**Violation injection in the replan prompt.** The replan node receives the exact violation strings from the constraint engine and injects them into the prompt:
+
+```
+# Violations
+The constraint validator rejected your proposal for these reasons:
+1. Insufficient budget: need £8.8m, have £6.8m (bank £1.2m + sale £5.6m).
+
+# Task
+Propose a DIFFERENT transfer that avoids the violations listed above.
+```
+
+The LLM reads the violation, understands it needs a cheaper player, and proposes one. The violation messages are the communication channel between the deterministic engine and the LLM.
+
+**Rejected proposal history.** The replan node does not just fix the current failure. It also records what failed and why:
+
+```python
+rejected_proposals.append(prev_proposal)
+replan_violations_history.append(list(state.get("violations", [])))
+```
+
+This history is passed to the explain node, which weaves it into the recommendation: "We initially considered Gyökeres, but that was off the table due to budget constraints." The user sees the full decision-making process, not just the final answer.
+
+**Two model tiers.** The analyze, replan, and captain nodes use `gpt-4o-mini` — fast, cheap, sufficient for structured proposals. The explain node uses `gpt-4o` — the larger model is justified because the final prose is the user-facing output and benefits from better writing. This keeps the per-run cost under $0.05 while the recommendation reads well.
+
+**Defensive ID resolution.** Even with structured output, the LLM can hallucinate a player ID that does not exist in the candidate list. Every node checks:
+
+```python
+out_player = squad_by_id.get(result.player_out_id)
+in_player = candidates_by_id.get(result.player_in_id)
+
+if out_player is None or in_player is None:
+    return {"proposed_transfer": None, "transfer_reasoning": "...could not be resolved..."}
+```
+
+An unresolvable ID degrades gracefully to a hold recommendation rather than crashing the graph.
+
+**Force-replan demo mode.** When `force_replan=True`, the analyze node skips the LLM entirely and returns a deliberately unaffordable transfer — the cheapest squad player out, the most expensive candidate in:
+
+```python
+most_expensive = max(candidates, key=lambda c: c["now_cost"])
+cheapest = min(same_pos, key=lambda p: p.get("selling_price", p["now_cost"]))
+```
+
+This guarantees a budget violation, which triggers the replan loop, which produces the project's best demo moment — the Gyökeres → Beto recovery — without spending on an LLM call for the first proposal.
 
 ### 6.4 What confused me
 
-> TODO: write this section.
+The explain node does not use `with_structured_output()`. The other three LLM nodes do. I initially added it to explain as well, wrapping the prose in a `{"recommendation": "..."}` JSON object. This made the LLM write worse prose — it would truncate paragraphs to fit the JSON structure and add escaping artifacts. Removing structured output and reading `response.content` directly fixed the quality immediately. Structured output is for data. Prose is not data.
+
+I also underestimated how important the prompt's negative instructions are. "Do NOT check budget constraints" in the analyze prompt is more valuable than "DO propose the best transfer." Without the negative instruction, the LLM would reject half the candidates on its own, making the constraint engine redundant and the replan loop unreachable.
 
 ---
 
-## 7. Phase 5: CLI + Streamlit + Observability
+## 7. Phase 5: Web UI + Resilience
 
 ### 7.1 What I built
 
-> TODO: write this section.
+`app.py` — a Gradio web UI that streams the graph execution as collapsible ChatMessage cards. `app_helpers.py` — pure functions that build the right-column components: squad HTML, transfer card, captain card, summary headline, meta footer. `llm.py` gained a BYOK (Bring Your Own Key) mechanism. `data/demo_cache.json` — a static cached trace for graceful fallback when the FPL API is down.
+
+The CLI (`main.py`) was built in earlier phases. It has three commands: `inspect` (data only, no LLM), `recommend` (full graph run with optional verbose trace), and `backtest` (stubbed for Phase 6).
 
 ### 7.2 Why it exists
 
-> TODO: write this section.
+A CLI is fine for development. A recruiter will not run a CLI. The web UI exists so someone can click a button, watch the agent reason in real time, and see the replan loop fire — all without installing anything. The streaming trace is the demo centerpiece: each node appears as a card that transitions from "pending" to "done," and the failed validation → replan sequence is visible as it happens.
+
+The resilience layer exists because the FPL API is unreliable. It goes down during matches, returns 404 for invalid team IDs, and shuts off entirely between seasons. A portfolio demo that shows a blank error page when a recruiter visits is worse than no demo at all.
 
 ### 7.3 Key concepts
 
-> TODO: write this section.
+**Streaming with `graph.astream()`.** The Gradio handler is an async generator that yields after every node completes:
+
+```python
+async for event in graph.astream(initial_state):
+    for node_name, update in event.items():
+        cumulative_state.update(update)
+        messages.append(ChatMessage(
+            role="assistant",
+            content=content,
+            metadata={"title": title, "status": "pending"},
+        ))
+        yield messages, _S, recommendation, _S, _S, _S, _S
+```
+
+Each yield updates the chatbot. The `_S` values are `gr.skip()` — they tell Gradio "do not touch this component." Without them, the right-column components flash loading indicators on every yield. On the final yield, all components populate at once.
+
+**Error taxonomy.** Not all errors are the same, and the UI treats them differently:
+
+- 404 (team not found) → "Team ID not found" with instructions to check the URL.
+- Connection error or 5xx → cached demo fallback from 2023/24 season.
+- `openai.AuthenticationError` → "API key rejected" with BYOK recovery steps.
+- `openai.RateLimitError` → "Rate limit reached" with retry advice.
+- Generic exception → "Something went wrong" as a catch-all.
+
+Each error yields a ChatMessage with a descriptive title instead of letting Gradio show opaque red error pills.
+
+**Rate limiting.** An in-memory counter limits the hosted key to 50 runs per day. It resets on UTC date rollover and on every HF Space restart — no persistence layer, no Redis, no SQLite. This is intentional. The cap prevents sustained abuse within a single uptime window. BYOK runs bypass the cap entirely. The counter increments only after a successful run, so failed attempts (auth errors, API outages) do not consume the budget.
+
+```python
+_daily_runs = 0
+_day_start: date | None = None
+_DAILY_CAP = 50
+```
+
+**BYOK threading.** The BYOK key is set via a module-level variable in `llm.py`:
+
+```python
+_api_key_override: str | None = None
+
+def set_api_key_override(key: str | None) -> None:
+    global _api_key_override
+    _api_key_override = key
+```
+
+This works because the Gradio handler enforces `concurrency_limit=1`. Only one graph executes at a time, so the global is never contested. The alternative — threading the key through the LangGraph state and modifying every node — would violate the constraint that node files should not change for a UI concern.
+
+**Cached demo fallback.** When the FPL API fails, the generator catches the exception and replays a pre-recorded trace:
+
+```python
+except httpx.HTTPStatusError as exc:
+    if exc.response.status_code == 404:
+        yield _error_yield("Team not found", "...")
+    else:
+        async for result in _replay_cached_demo():
+            yield result
+```
+
+The cached demo is the Gyökeres → Beto recovery trace from GW 33 of the 2023/24 season. It replays with 1-second delays between events so it still feels live. A warning banner at the top makes it clear the data is historical.
+
+**Right-column builders are pure functions.** `app_helpers.py` contains five functions that take a state dict and return display-ready strings. No network calls, no LLM calls, no side effects. This makes them trivially testable — construct a dict, call the function, assert on the output.
 
 ### 7.4 What confused me
 
-> TODO: write this section.
+Gradio's `gr.Chatbot` was designed for conversations, not traces. The `metadata` field that controls the pending/done spinner is underdocumented. I discovered it by reading Gradio's source — `status: "pending"` shows a pulsing indicator, `status: "done"` collapses the card. There is no official API for this.
+
+The `gr.skip()` function was also non-obvious. Without it, every yield sends empty strings to the right-column components, which Gradio interprets as "clear and show loading." Using `gr.skip()` tells Gradio "this component has not changed, leave it alone." The difference is invisible in the code but dramatic in the UI.
 
 ---
 
 ## 8. Phase 6: Evaluation
 
-### 8.1 What I built
+Phase 6 is not yet implemented. The `eval/` directory exists but contains only an empty `__init__.py`. The `backtest` CLI command is stubbed. This section describes what is planned.
 
-> TODO: write this section.
+### 8.1 What will be built
 
-### 8.2 Why it exists
+`eval/backtest.py` — a harness that runs the agent on historical squad snapshots, one gameweek at a time, with data leakage prevention. `eval/scoring.py` — functions that compare the agent's recommendations against actual outcomes. `eval/heuristic.py` — a deterministic baseline that picks transfers by highest expected points and captains by highest form, with no LLM involved. `eval/judge.py` — an LLM-as-judge that scores the agent's reasoning on factual grounding, logical coherence, and actionability.
 
-> TODO: write this section.
+### 8.2 Why it will exist
 
-### 8.3 Key concepts
+Without evaluation, the project is a demo. With evaluation, it is a system. The backtest answers "does this agent make good decisions?" The heuristic baseline answers "does the LLM add value over a simple rule?" The LLM-judge answers "is the reasoning coherent, or is the agent getting lucky?"
 
-> TODO: write this section.
+### 8.3 Planned approach
 
-### 8.4 What confused me
+**Backtesting with leakage prevention.** For each gameweek N in a range, the harness fetches the user's squad as of GW N-1 and runs the agent with player history filtered to `round < N`. The agent never sees future data. This is the same constraint that a human manager operates under — you make decisions on Monday with data through Sunday.
 
-> TODO: write this section.
+**Scoring dimensions.** Transfer delta: did the incoming player outscore the outgoing player in the target gameweek? Captain delta: did the agent's captain outscore the user's actual captain? These are measured per-gameweek and aggregated as hit rates.
+
+**Heuristic baseline.** The deterministic baseline picks the transfer candidate with the highest expected points at the weakest squad position, and the captain with the highest expected points in the post-transfer squad. No LLM, no reasoning, no cost. If the agent cannot beat this baseline, the LLM is not earning its keep.
+
+### 8.4 Known limitations
+
+Historical availability data (`chance_of_playing`, `news`) is point-in-time only. The FPL API does not serve historical values for these fields. Backtests will use current availability, which may not match what was known at the time. This is a data limitation, not a design flaw.
 
 ---
 
 ## 9. Glossary
 
-> TODO: write this section.
+**FPL.** Fantasy Premier League — the official fantasy football game run by the Premier League.
+
+**Gameweek (GW).** One round of Premier League fixtures. There are 38 per season.
+
+**FDR.** Fixture Difficulty Rating. A 1–5 score assigned by the FPL team to each fixture, based on team strength and home/away. Does not update dynamically with form.
+
+**Form.** A player's average points per game over the last 30 days. Returned as a string by the FPL API (e.g., "4.7").
+
+**EP Next.** Expected Points Next — the FPL API's prediction of how many points a player will score in the upcoming gameweek.
+
+**now_cost.** A player's current price, stored in tenths. `now_cost = 100` means £10.0m.
+
+**element_type.** Position code from the FPL API: 1 = GKP, 2 = DEF, 3 = MID, 4 = FWD.
+
+**Free transfer (FT).** One free transfer per gameweek, banking up to two. Additional transfers cost 4 points each.
+
+**Replan loop.** The architectural centerpiece: the LLM proposes a transfer, the constraint engine validates it, and if it fails, the LLM is asked to try again with the violation list injected into the prompt. Capped at 2 attempts.
+
+**BYOK.** Bring Your Own Key — users can paste their own OpenAI API key to bypass the hosted key's daily cap.
+
+**Structured output.** LangChain's `with_structured_output()` method, which constrains the LLM to return JSON matching a Pydantic schema. Used on all data-returning nodes.
 
 ---
 
 ## 10. What I'd Do Differently
 
-> TODO: write this section.
+**Start with the constraint engine, not the data layer.** Phase 1 built the FPL client and candidate filter. Phase 2 built the constraint engine. In retrospect, building the constraint engine first would have forced clearer thinking about what data it needs, and the data layer could have been shaped to serve it. Instead, I built the data layer speculatively and had to adjust field names later.
+
+**Use a custom fixture difficulty model.** The FPL API's FDR is static and does not reflect recent form. A rolling xG-based difficulty score would produce more accurate recommendations. This is the single highest-impact improvement for recommendation quality, and it does not require changing the architecture — just replacing one number in the candidate filter.
+
+**Build the eval harness earlier.** Without evaluation, every prompt change is guesswork. I tuned prompts by reading output and deciding if it "sounded right." An automated scoring function would have caught regressions and quantified improvements. The eval framework should have been Phase 4, not Phase 6.
+
+**Do not approximate selling price.** Using `now_cost` as selling price causes budget violations that should not happen and misses violations that should. Reconstructing the actual selling price from transfer history is feasible — the API exposes the data — but I scoped it out as an MVP trade-off. For a production system, this would be the first thing to fix.
