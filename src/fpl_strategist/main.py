@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import asyncio
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -286,11 +290,116 @@ def recommend(
 @app.command()
 def backtest(
     team_id: int = typer.Argument(..., help="FPL team ID"),
-    from_gw: int = typer.Option(5, "--from-gw", help="Start gameweek"),
-    to_gw: int = typer.Option(30, "--to-gw", help="End gameweek"),
+    from_gw: int = typer.Option(5, "--from-gw", help="Start gameweek (inclusive)"),
+    to_gw: int = typer.Option(30, "--to-gw", help="End gameweek (inclusive)"),
+    provider: str = typer.Option("openai", "--provider", help="LLM provider: openai or anthropic"),
+    skip_judge: bool = typer.Option(False, "--skip-judge", help="Skip LLM-judge coherence scoring"),
+    concurrency: int = typer.Option(5, "--concurrency", help="Max concurrent FPL API requests"),
+    json_only: bool = typer.Option(False, "--json-only", help="Machine-readable JSON output only"),
 ) -> None:
     """Backtest the agent against historical gameweek outcomes."""
-    console.print("[yellow]backtest command not yet implemented — coming in Phase 6[/yellow]")
+    from fpl_strategist.eval.backtest import run_backtest, save_results_json
+    from fpl_strategist.eval.scoring import results_to_table
+
+    results, summary = asyncio.run(
+        run_backtest(
+            team_id=team_id,
+            from_gw=from_gw,
+            to_gw=to_gw,
+            provider=provider,
+            skip_judge=skip_judge,
+            concurrency=concurrency,
+        )
+    )
+
+    saved_path = save_results_json(results, summary, team_id, from_gw, to_gw)
+
+    if json_only:
+        import json
+        console.print(saved_path.read_text())
+        return
+
+    # Rich results table
+    table = Table(title=f"Backtest — Team {team_id}, GW {from_gw}–{to_gw}", show_lines=True)
+    table.add_column("GW", style="bold")
+    table.add_column("Action")
+    table.add_column("Agent Out → In")
+    table.add_column("Δ Transfer", justify="right")
+    table.add_column("Agent Cap")
+    table.add_column("Δ Captain", justify="right")
+    table.add_column("H Out → In")
+    table.add_column("H Δ Transfer", justify="right")
+    table.add_column("H Cap")
+    table.add_column("H Δ Captain", justify="right")
+    if not skip_judge:
+        table.add_column("Coherence", justify="right")
+
+    for r in results:
+        transfer_str = f"{r.player_out_name} → {r.player_in_name}" if r.transfer_action == "transfer" else "hold"
+        h_transfer_str = f"{r.heuristic_out_name} → {r.heuristic_in_name}" if r.heuristic_out_name != "--" else "hold"
+        delta_color = "green" if r.transfer_delta > 0 else ("red" if r.transfer_delta < 0 else "white")
+        cap_color = "green" if r.captain_delta > 0 else ("red" if r.captain_delta < 0 else "white")
+        h_delta_color = "green" if r.heuristic_transfer_delta > 0 else ("red" if r.heuristic_transfer_delta < 0 else "white")
+        h_cap_color = "green" if r.heuristic_captain_delta > 0 else ("red" if r.heuristic_captain_delta < 0 else "white")
+
+        row = [
+            str(r.gw),
+            r.transfer_action,
+            transfer_str,
+            f"[{delta_color}]{r.transfer_delta:+d}[/{delta_color}]",
+            r.agent_captain_name,
+            f"[{cap_color}]{r.captain_delta:+d}[/{cap_color}]",
+            h_transfer_str,
+            f"[{h_delta_color}]{r.heuristic_transfer_delta:+d}[/{h_delta_color}]",
+            r.heuristic_captain_name,
+            f"[{h_cap_color}]{r.heuristic_captain_delta:+d}[/{h_cap_color}]",
+        ]
+        if not skip_judge:
+            coherence_str = f"{r.coherence_score:.1f}" if r.coherence_score is not None else "—"
+            row.append(coherence_str)
+        table.add_row(*row)
+
+    console.print(table)
+
+    # Summary panel
+    console.print(Rule("Summary"))
+    summary_table = Table(show_header=True, header_style="bold magenta")
+    summary_table.add_column("Metric")
+    summary_table.add_column("Agent (mean ± σ)", justify="right")
+    summary_table.add_column("Heuristic (mean ± σ)", justify="right")
+
+    summary_table.add_row(
+        "Transfer delta",
+        f"{summary.agent_avg_transfer_delta:+.1f} ± {summary.agent_transfer_delta_std:.1f}",
+        f"{summary.heuristic_avg_transfer_delta:+.1f} ± {summary.heuristic_transfer_delta_std:.1f}",
+    )
+    summary_table.add_row(
+        "Transfer hit rate",
+        f"{summary.agent_transfer_hit_rate:.0%}",
+        f"{summary.heuristic_transfer_hit_rate:.0%}",
+    )
+    summary_table.add_row(
+        "Captain delta",
+        f"{summary.agent_avg_captain_delta:+.1f} ± {summary.agent_captain_delta_std:.1f}",
+        f"{summary.heuristic_avg_captain_delta:+.1f} ± {summary.heuristic_captain_delta_std:.1f}",
+    )
+    summary_table.add_row(
+        "Captain hit rate",
+        f"{summary.agent_captain_hit_rate:.0%}",
+        f"{summary.heuristic_captain_hit_rate:.0%}",
+    )
+    if not skip_judge and summary.avg_coherence is not None:
+        summary_table.add_row(
+            "Coherence (1-5)",
+            f"{summary.avg_coherence:.2f} ± {summary.coherence_std:.2f}",
+            "—",
+        )
+    summary_table.add_row("Hold rate", f"{summary.hold_rate:.0%}", "—")
+    summary_table.add_row("Avg replans", f"{summary.avg_replan_count:.1f}", "—")
+    summary_table.add_row("GWs evaluated", str(summary.total_gws), "—")
+
+    console.print(summary_table)
+    console.print(f"\n[dim]Results saved to {saved_path}[/dim]")
 
 
 if __name__ == "__main__":
