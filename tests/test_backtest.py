@@ -299,6 +299,12 @@ class TestRunSingleGw:
 # CLI
 # ---------------------------------------------------------------------------
 
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes so CI Rich output is plain-text comparable."""
+    import re
+    return re.sub(r"\x1b\[[0-9;]*[mK]", "", text)
+
+
 class TestBacktestCli:
     def test_backtest_command_exists(self):
         """Verify the CLI has a 'backtest' command with the required options."""
@@ -308,7 +314,8 @@ class TestBacktestCli:
         runner = CliRunner()
         result = runner.invoke(app, ["backtest", "--help"])
         assert result.exit_code == 0
-        assert "--from-gw" in result.output
-        assert "--to-gw" in result.output
-        assert "--skip-judge" in result.output
-        assert "--json-only" in result.output
+        plain = _strip_ansi(result.output)
+        assert "--from-gw" in plain
+        assert "--to-gw" in plain
+        assert "--skip-judge" in plain
+        assert "--json-only" in plain
