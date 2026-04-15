@@ -33,7 +33,8 @@ The captain's points are doubled, so choose the player most likely to deliver \
 a big haul this gameweek.
 
 Prioritize:
-- High recent form (players on a scoring streak)
+- High recent form (players on a scoring streak). Form is average points per \
+game over the last 30 days: 2.0 = poor, 4.0 = average, 7.0+ = elite
 - Favorable upcoming fixture difficulty (lower number = easier match)
 - Track record of heavy returns: goals and assists for attackers and \
 midfielders, clean sheets and bonus points for defenders and goalkeepers

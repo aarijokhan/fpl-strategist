@@ -141,4 +141,146 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an expert Fantasy Premier
+      League captain selector. You pick a captain and vice-captain for the upcoming
+      gameweek based on form, fixture difficulty, and expected returns.\\n\\n# Context\\nTarget
+      gameweek: GW 30\\n\\n## Post-Transfer Squad\\nName (id) | Pos | Team | Form
+      | Price | EP Next | Fixture\\n--- | --- | --- | --- | --- | --- | ---\\nAlisson
+      (id=100) | GKP | LIV | 5.0 | \xA35.5m | 4.5 | SOU(H) [2]\\nRaya (id=101) | GKP
+      | ARS | 4.5 | \xA35.5m | 4.0 | MCI(H) [4]\\nAlexander-Arnold (id=200) | DEF
+      | LIV | 6.0 | \xA38.5m | 5.5 | SOU(H) [2]\\nSaliba (id=201) | DEF | ARS | 5.5
+      | \xA36.0m | 4.5 | MCI(H) [4]\\nGvardiol (id=202) | DEF | MCI | 4.0 | \xA36.0m
+      | 3.5 | ARS(A) [3]\\nEstupinan (id=203) | DEF | BHA | 3.0 | \xA35.0m | 2.5 |
+      NFO(H) [2]\\nMitchell (id=204) | DEF | CRY | 2.0 | \xA34.5m | 1.5 | BRE(A) [3]\\nSalah
+      (id=300) | MID | LIV | 8.5 | \xA313.0m | 7.0 | SOU(H) [2]\\nPalmer (id=301)
+      | MID | CHE | 7.0 | \xA311.0m | 6.0 | BOU(H) [2]\\nSaka (id=302) | MID | ARS
+      | 6.0 | \xA310.0m | 5.5 | MCI(H) [4]\\nMbeumo (id=303) | MID | BRE | 5.0 | \xA37.5m
+      | 4.5 | CRY(H) [2]\\nHaaland (id=400) | FWD | MCI | 7.0 | \xA314.5m | 6.5 |
+      ARS(A) [3]\\nWatkins (id=401) | FWD | AVL | 5.5 | \xA38.5m | 5.0 | NEW(H) [3]\\nSolanke
+      (id=402) | FWD | TOT | 4.0 | \xA37.5m | 3.5 | EVE(H) [2]\\nDiaz (id=310) | MID
+      | LIV | 6.5 | \xA38.0m | 6.0 | SOU(H) [2]\\n\\n# Task\\nPick a captain and a
+      vice-captain from the squad above for GW 30. The captain's points are doubled,
+      so choose the player most likely to deliver a big haul this gameweek.\\n\\nPrioritize:\\n-
+      High recent form (players on a scoring streak). Form is average points per game
+      over the last 30 days: 2.0 = poor, 4.0 = average, 7.0+ = elite\\n- Favorable
+      upcoming fixture difficulty (lower number = easier match)\\n- Track record of
+      heavy returns: goals and assists for attackers and midfielders, clean sheets
+      and bonus points for defenders and goalkeepers\\n- The vice-captain is a backup
+      if the captain doesn't play \u2014 ideally pick one from a different fixture
+      than the captain\\n\\n# Rules\\n- Captain and vice-captain must be different
+      players\\n- Prefer players expected to start (not on the bench), but you may
+      pick from any of the 15 squad players\\n\\n# Output format\\nReturn a JSON object
+      with these exact fields:\\n- captain_id: the squad player's ID for captain\\n-
+      vice_captain_id: a different squad player's ID for vice-captain\\n- reasoning:
+      2-3 sentences citing specific form numbers and fixture difficulty\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Structured
+      output from select_captain node.\",\"properties\":{\"captain_id\":{\"title\":\"Captain
+      Id\",\"type\":\"integer\"},\"vice_captain_id\":{\"title\":\"Vice Captain Id\",\"type\":\"integer\"},\"reasoning\":{\"title\":\"Reasoning\",\"type\":\"string\"}},\"required\":[\"captain_id\",\"vice_captain_id\",\"reasoning\"],\"title\":\"CaptainPick\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"CaptainPick\",\"strict\":true}},\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, br, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2972'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Helper-Method:
+      - chat.completions.parse
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        Cw2AewogICJpZCI6ICJjaGF0Y21wbC1EVXQyZml44UYAQKxsWn8+r67Zu4xT4nkhRIeSxQBaCw0l
+        Cec14tTzAGnE1qSxwBbI/Kzu82JxTMxVY01Be7VigVOslaNT93hrYgQYQuc3GL6h/Ow+775x8W74
+        pzwdPu70qR3XLylNAJLtLesoqXaXGHhGHAububyPc8owmM2mw8lothgRn60lZ0sZqGxiZyyd2jjT
+        GfaH405/1hnMNfRWYjQHyvA/AYDL3RpAPfBHlKGfPmVXZJiUMf4JIC+WKQOpEEyIykVKGaCE3cgy
+        0GVJWjVRGbcx+ZKyUb+fLmlvNG9oG4N0SXtj/ZBx5ZKyJX1XVlUwAcaBrYmMQnyNg4kVlIPas1cl
+        QwrMun2k178aIHv2bUUOtipEjPrI1Sn0pjhb9THJ5mf/Wm0tozDH2HpOiMtttHWQqpsoLsWhErTf
+        P+oQfVuWlnPkXLALZs/21MULox4GNa89k9Y7rqWNFZQNAikK9gGlSA60wD5hKYvCvdHccUaUomKs
+        yzECplsHjINWgfHdIz/lwsE9jGisOnWXdOd66Pq/XVnK4FprYwKYp4KurKKl3oXtNrJSNl62QVyl
+        MnryJjRxykAhSkPB9u8SYAWn+RYhndR4qZu4ibLjIb3FbHzOEIqBQ58PDvjpBEA7NOhPJqlSdVP0
+        TwtjtgGkla44lwf4bqs2N0KkbFnpzqRK/RwqG19AzGnNTeR8Uzay+NrASs7zLWs1cTVxx9U6zG6i
+        YU8Z6OtMMzw6hcj1pjCuZN94MwHvF81mWEwnxWIyHmhK7hI=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9ecababe1d8a4f31-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - br
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 15 Apr 2026 11:49:54 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '1232'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=44aTddaSWaV95jlrUihACxIjGpekWu9mNPDdTgHHgDw-1776253792.980661-1.0.1.1-JFdhRa1kXemFMzK03get_Qjwpr7LKRkmtykXT51n8Tz_yrPohVmSoTscFVij3075v0FJDG0Sv9WbHAX.TLmALQBI96YZelNtvU_LyRGozzKpmYd.89GC0IQhZ6wI_Wd_;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 15 Apr 2026
+        12:19:54 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '199402'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 179ms
+      x-request-id:
+      - req_8181615ca8cf4403aab2cbbc5f1926f4
+    status:
+      code: 200
+      message: OK
 version: 1

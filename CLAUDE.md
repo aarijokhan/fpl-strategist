@@ -33,17 +33,19 @@ Multi-gameweek lookahead, chip strategy (wildcard/bench-boost/triple-captain/fre
 ## File structure
 
 ```
+app.py              # Gradio web UI (top-level for HF Spaces deployment)
+app_helpers.py      # Gradio component builders (HTML cards, tables)
 src/fpl_strategist/
 ├── data/           # FPL API client (async httpx + tenacity), Pydantic models, candidate filter
 ├── constraints/    # Deterministic transfer validation engine
-├── nodes/          # One file per LangGraph node (fetch_context, analyze, validate, replan, captain, explain)
-├── eval/           # Backtesting harness, scoring, heuristic baseline, LLM-judge
+├── nodes/          # One file per LangGraph node + schemas.py for Pydantic response models
+├── eval/           # Backtesting harness, scoring, heuristic baseline, historical reconstruction, LLM-judge
 ├── main.py         # Typer CLI (inspect, recommend, backtest)
 ├── state.py        # LangGraph FPLState TypedDict
 ├── graph.py        # LangGraph graph definition with conditional routing
-tests/              # pytest + respx mocks, one test file per module and node
-docs/               # PRD.md with full requirements and implementation phases
-streamlit_app.py    # Streamlit web UI (top-level for deployment)
+├── llm.py          # LLM factory with Langfuse callback wiring
+tests/              # pytest + respx + VCR cassettes, one test file per module and node
+docs/               # PRD.md, WALKTHROUGH.md, phase_5_baseline.md
 ```
 
 ## Conventions

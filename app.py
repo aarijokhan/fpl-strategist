@@ -393,13 +393,13 @@ with gr.Blocks(title="FPL Transfer Strategist") as demo:
         )
         gr.Markdown(
             "Your key is used only for this session — never stored or logged. "
-            "[Source code on GitHub](https://github.com/aarij-anwer/fpl-strategist) "
+            "[Source code on GitHub](https://github.com/aarijokhan/fpl-strategist) "
             "for verification."
         )
 
     with gr.Row():
         with gr.Column(scale=2):
-            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=280)
+            chatbot = gr.Chatbot(label="Agent Reasoning Trace", height=600)
             summary_md = gr.Markdown()
             recommendation_md = gr.Markdown(label="Recommendation")
         with gr.Column(scale=1):

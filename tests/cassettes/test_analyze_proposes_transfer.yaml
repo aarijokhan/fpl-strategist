@@ -313,4 +313,163 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: "{\"messages\":[{\"content\":\"# Role\\nYou are an expert Fantasy Premier
+      League analyst. You evaluate squads and propose one transfer (or hold) based
+      purely on football intelligence: form, fixtures, expected points, and tactical
+      fit.\\n\\n# Context\\nTarget gameweek: GW 30\\n\\n## Current Squad\\nName (id)
+      | Pos | Team | Form | Price | EP Next | Fixture\\n--- | --- | --- | --- | ---
+      | --- | ---\\nAlisson (id=100) | GKP | LIV | 5.0 | \xA35.5m | 4.5 | SOU(H) [2]\\nRaya
+      (id=101) | GKP | ARS | 4.5 | \xA35.5m | 4.0 | MCI(H) [4]\\nAlexander-Arnold
+      (id=200) | DEF | LIV | 6.0 | \xA38.5m | 5.5 | SOU(H) [2]\\nSaliba (id=201) |
+      DEF | ARS | 5.5 | \xA36.0m | 4.5 | MCI(H) [4]\\nGvardiol (id=202) | DEF | MCI
+      | 4.0 | \xA36.0m | 3.5 | ARS(A) [3]\\nEstupinan (id=203) | DEF | BHA | 3.0 |
+      \xA35.0m | 2.5 | NFO(H) [2]\\nMitchell (id=204) | DEF | CRY | 2.0 | \xA34.5m
+      | 1.5 | BRE(A) [3]\\nSalah (id=300) | MID | LIV | 8.5 | \xA313.0m | 7.0 | SOU(H)
+      [2]\\nPalmer (id=301) | MID | CHE | 7.0 | \xA311.0m | 6.0 | BOU(H) [2]\\nSaka
+      (id=302) | MID | ARS | 6.0 | \xA310.0m | 5.5 | MCI(H) [4]\\nMbeumo (id=303)
+      | MID | BRE | 5.0 | \xA37.5m | 4.5 | CRY(H) [2]\\nElanga (id=304) | MID | NFO
+      | 1.5 | \xA35.5m | 1.0 | BHA(A) [3]\\nHaaland (id=400) | FWD | MCI | 7.0 | \xA314.5m
+      | 6.5 | ARS(A) [3]\\nWatkins (id=401) | FWD | AVL | 5.5 | \xA38.5m | 5.0 | NEW(H)
+      [3]\\nSolanke (id=402) | FWD | TOT | 4.0 | \xA37.5m | 3.5 | EVE(H) [2]\\n\\nBudget
+      in bank: \xA32.5m | Free transfers: 1\\n\\n## Transfer Candidates (pre-filtered,
+      grouped by position)\\n### GKP\\n  Flekken (id=110) | Form: 4.0 | EP: 3.5 |
+      \xA34.5m | CRY(H) [2]\\n\\n### DEF\\n  Pedro Porro (id=210) | Form: 6.0 | EP:
+      5.0 | \xA35.5m | EVE(H) [2]\\n  Gabriel (id=211) | Form: 5.0 | EP: 4.0 | \xA35.5m
+      | MCI(H) [4]\\n  Mykolenko (id=212) | Form: 4.0 | EP: 3.0 | \xA34.4m | TOT(A)
+      [4]\\n\\n### MID\\n  Diaz (id=310) | Form: 6.5 | EP: 6.0 | \xA38.0m | SOU(H)
+      [2]\\n  Gordon (id=311) | Form: 5.5 | EP: 5.0 | \xA37.5m | AVL(A) [3]\\n  Rogers
+      (id=312) | Form: 5.0 | EP: 4.5 | \xA35.5m | NEW(H) [3]\\n  Eze (id=313) | Form:
+      4.5 | EP: 4.0 | \xA37.0m | BRE(A) [3]\\n\\n### FWD\\n  Isak (id=410) | Form:
+      7.5 | EP: 7.0 | \xA39.0m | AVL(A) [3]\\n  Joao Pedro (id=412) | Form: 5.0 |
+      EP: 4.5 | \xA36.0m | NFO(H) [2]\\n  Welbeck (id=413) | Form: 4.5 | EP: 4.0 |
+      \xA35.5m | NFO(H) [2]\\n\\n# Task\\nAnalyse the squad above given current form
+      and upcoming fixtures. Propose ONE transfer (player out, player in) that most
+      improves the squad for GW 30, or recommend \\\"hold\\\" if no transfer is clearly
+      beneficial.\\n\\nFocus on:\\n- Players in the squad with poor form or tough
+      upcoming fixtures \u2014 transfer out. Form is average points per game over
+      the last 30 days: 2.0 = poor, 4.0 = average, 7.0+ = elite\\n- Candidates with
+      strong form and favourable fixtures \u2014 transfer in\\n- Replace like-for-like
+      (same position)\\n\\n# Rules\\nDo NOT check or enforce any of the following
+      \u2014 they are validated deterministically downstream and are NOT your concern:\\n-
+      Budget constraints (whether the user can afford the transfer)\\n- Team limits
+      (max 3 players per Premier League team)\\n- Squad size or formation rules\\n-
+      Player availability, injury status, or suspensions\\n\\nYour ONLY job is football
+      intelligence. Propose the best transfer on footballing merit alone. The constraint
+      engine will reject invalid proposals and ask you to try again if needed.\\n\\n#
+      Output format\\nReturn a JSON object with these exact fields:\\n- action: \\\"transfer\\\"
+      or \\\"hold\\\"\\n- player_out_id: the squad player's ID to transfer out (null
+      if hold)\\n- player_in_id: the candidate's ID to bring in (null if hold)\\n-
+      reasoning: 2-3 sentences explaining your footballing logic\\n\",\"role\":\"user\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Structured
+      output from analyze_and_propose and replan_transfer nodes.\",\"properties\":{\"action\":{\"enum\":[\"transfer\",\"hold\"],\"title\":\"Action\",\"type\":\"string\"},\"player_out_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      Out Id\"},\"player_in_id\":{\"anyOf\":[{\"type\":\"integer\"},{\"type\":\"null\"}],\"title\":\"Player
+      In Id\"},\"reasoning\":{\"title\":\"Reasoning\",\"type\":\"string\"}},\"required\":[\"action\",\"player_out_id\",\"player_in_id\",\"reasoning\"],\"title\":\"TransferProposal\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"TransferProposal\",\"strict\":true}},\"stream\":false}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate, br, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4247'
+      Content-Type:
+      - application/json
+      Host:
+      - api.openai.com
+      User-Agent:
+      - AsyncOpenAI/Python 2.31.0
+      X-Stainless-Arch:
+      - arm64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Helper-Method:
+      - chat.completions.parse
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - MacOS
+      X-Stainless-Package-Version:
+      - 2.31.0
+      X-Stainless-Raw-Response:
+      - 'true'
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.14.3
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        Cw2AewogICJpZCI6ICJjaGF0Y21wbC1EVXQyV0VwECUAQKx0VjlJ1DXRG9Y5hW+M5YrSwgACVqMy
+        a5wCc+t/qNGsibW//RDFh1h7JETxdl4xCQ0iJVNpp2Fz7cP6tbYWiBroTw59gzssTwv/Zv/647Nx
+        +P782+8qXPgfpQlAsm25iCXV4RID14gVYSOXX+OSFCar1XK6mK3Wc+azOym5JwWqXRzMZbAz1gym
+        4+l8MF4NJmsNVxsxBQdS+J8AwPVtCKA98GdJYZx+ZVdkGKQEUwLIS8+kQDoEE6K2kVIBgLDLU6Br
+        RjHYRzNSGW2J8B8V+4zSjFyvz+xz2cfclBmp6XjO0Yylkck4zShnVsfYWlPcRxOLhvseaaimyxbG
+        wol4VOJ3eDQdjh/vRvHLShccoBFlXzdA1lhrTnHvOQruh88821iJL5HFa3Tvkoo9UusdH5m7FOB6
+        LzRmBw3nzY5RaFuaUkdGJR5d+wVkH4f4wqUXfBHvJcVEcB+NtmUKE2AsapGyzcQy92hiA43w8cn1
+        tmc0smN68PLAPopNEZt9AIjfSmNraOQTGxF3DAOeNfHcPBZ0gKp00+vfmI2HGd2tBQcFEK97UrD7
+        vjcjDBPKT5QHA6t3SyejXmrnZRuKq4S8J+dWKycFClEcSQT3BHjwwMG9U20l52XnYh6l4yr9yXy9
+        UtpHng8i2mZxwUEVAG/aZLGeplrVHCiwP3jxKip00XB5g8uP6n1phEkR0/cWTWqpn/PYjh9g1hUF
+        u8hlDjXZ2G3QMZvnlgtRNfnX5J3DR6zNo2FPCjSj0wK3ziHyLq+Mrdk7bwbt5crl881qvp0XM72m
+        5J4YAw==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9ecaba7e79161ddc-DXB
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - br
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 15 Apr 2026 11:49:45 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - user-pnljbdbwyzldopml5iruffek
+      openai-processing-ms:
+      - '1321'
+      openai-project:
+      - proj_9AbB9P9SxKEzqgtGDlWAtsXW
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - __cf_bm=QJLw9.G_aShX0_GKIWgop3CdWZ6I.Ialz5V_qeqet3c-1776253782.7965248-1.0.1.1-jACREa0YenXJxbmBQU4pQk_556ms3MYUa.vSSXHPap48BbhTw.CUMbQ_QR2VEFrVnnR29rqsgPl_K3p_wf4SvgDDBVrLc3DzN9kr830FeqS9CQKm_xWv66RlWwHH6gYx;
+        HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Wed, 15 Apr 2026
+        12:19:45 GMT
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '199135'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 259ms
+      x-request-id:
+      - req_8ce3bca01b224d8aa219007f354b9e4c
+    status:
+      code: 200
+      message: OK
 version: 1

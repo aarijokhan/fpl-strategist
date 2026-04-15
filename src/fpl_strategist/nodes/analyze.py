@@ -37,7 +37,8 @@ Propose ONE transfer (player out, player in) that most improves the squad \
 for GW {target_gw}, or recommend "hold" if no transfer is clearly beneficial.
 
 Focus on:
-- Players in the squad with poor form or tough upcoming fixtures — transfer out
+- Players in the squad with poor form or tough upcoming fixtures — transfer out. \
+Form is average points per game over the last 30 days: 2.0 = poor, 4.0 = average, 7.0+ = elite
 - Candidates with strong form and favourable fixtures — transfer in
 - Replace like-for-like (same position)
 

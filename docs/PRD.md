@@ -15,8 +15,8 @@ The demo centerpiece is the **visible replan loop**: when the LLM proposes a tra
 - Natural-language reasoning grounded in live FPL data
 - Deterministic constraint validation (no LLM in the loop for rules)
 - Evaluation via backtesting against historical gameweek outcomes
-- CLI interface with Rich output + **Streamlit web UI** deployed to HF Spaces or Railway (live URL for recruiters)
-- **Langfuse** integration for LLM tracing (screenshot in README)
+- CLI interface with Rich output + **Gradio web UI** deployed to HF Spaces (live URL for recruiters)
+- **Langfuse** integration for LLM tracing
 - Target budgets: **<$0.05 per run**, **<15s p50 latency**
 
 **Out of scope for MVP:** multi-gameweek lookahead, chip strategy, wildcard planning, multi-transfer planning.
@@ -31,10 +31,10 @@ The demo centerpiece is the **visible replan loop**: when the LLM proposes a tra
 | LLM | langchain-openai (GPT-4o default), langchain-anthropic (Sonnet as alt) | Structured output, cost-efficient |
 | HTTP | httpx (async) + tenacity (retry) | Parallel fetches for 15 player summaries, resilient to transient failures |
 | Tracing | Langfuse | LLM observability, cost tracking, screenshot for README |
-| Web UI | Streamlit | Recruiter-facing live demo, deployed to HF Spaces / Railway |
+| Web UI | Gradio | Recruiter-facing live demo, deployed to HF Spaces |
 | Data validation | Pydantic v2 | API response + LLM output parsing |
 | CLI | Typer + Rich | Colored tables, progress spinners, panels |
-| Testing | pytest + respx | Mock httpx without hitting live API |
+| Testing | pytest + respx + vcrpy | Mock httpx without hitting live API; VCR cassettes for LLM responses |
 | Eval | pandas (optional dep) | Backtest result analysis |
 | Python | >=3.11 | |
 
@@ -164,7 +164,8 @@ Entirely deterministic Python. Returns `ValidationResult(is_valid: bool, violati
 | Team limit | No team with >3 players post-transfer | "MCI would have 4 players (max 3)" |
 | Position match | Out and in must share `element_type` | "Cannot replace DEF with MID" |
 | Availability | Incoming player `status` in `['a','d']` | "Isak unavailable: knee injury" |
-| Squad membership | Out player in squad, in player exists | "Player not in your squad" |
+| Squad membership | Out player in squad | "Player not in your squad" |
+| Player existence | In player exists in all_players | "Player ID not found" |
 | No self-swap | Out != In | "Cannot transfer a player for themselves" |
 
 ---
@@ -187,10 +188,11 @@ All LLM nodes with structured output use `with_structured_output()` and Pydantic
 
 ### Backtest approach
 
-For each historical gameweek N in a range (e.g., GW 5-30):
-1. Fetch the user's squad as of GW N-1
+For each historical gameweek N in a range (e.g., GW 5-25):
+1. Reconstruct the user's squad as of GW N-1 (`historical.py`)
 2. Run the agent (filtering player history to `round < N` to prevent data leakage)
 3. Compare agent's recommendation against actual GW N outcomes
+4. Score agent vs heuristic baseline vs user's actual decisions
 
 ### Metrics
 
@@ -225,6 +227,7 @@ In addition to point-based metrics, use an LLM-as-judge call to score the agent'
 fpl recommend 12345                    # Main command: one-GW recommendation
 fpl recommend 12345 --verbose          # Show graph trace (demo mode)
 fpl recommend 12345 --provider anthropic
+fpl recommend 12345 --force-replan     # Force an invalid first proposal to demo the replan loop
 fpl inspect 12345                      # Debug: show squad data, no LLM
 fpl backtest 12345 --from-gw 5 --to-gw 30
 ```
@@ -235,7 +238,7 @@ Rich-formatted panels showing:
 1. Current squad table (player, team, form, price, fixture)
 2. Budget + free transfers
 3. Transfer recommendation with reasoning
-4. **Replan note if constraint violation occurred** (the demo centerpiece)
+4. **Replan note if constraint violation occurred** (the demo centerpiece; use `--force-replan` to guarantee this path)
 5. Captain/vice-captain pick
 6. Full natural-language explanation
 
@@ -258,51 +261,76 @@ Rich-formatted panels showing:
 ```
 fpl-strategist/
 ├── pyproject.toml
-├── .env.example                    # OPENAI_API_KEY=
+├── requirements.txt
+├── .env.example                    # OPENAI_API_KEY=, LANGFUSE keys, etc.
 ├── .gitignore
-├── README.md
+├── README.md                       # HF Spaces metadata + project description
+├── app.py                          # Gradio web UI (top-level for HF Spaces deployment)
+├── app_helpers.py                  # Gradio component builders (HTML cards, tables)
+├── .github/
+│   └── workflows/
+│       └── test.yml                # CI: pytest on push/PR
 ├── src/fpl_strategist/
 │   ├── __init__.py
-│   ├── main.py                     # Typer CLI
+│   ├── main.py                     # Typer CLI (inspect, recommend, backtest)
 │   ├── state.py                    # FPLState TypedDict
-│   ├── graph.py                    # LangGraph graph definition
+│   ├── graph.py                    # LangGraph graph definition + conditional routing
+│   ├── llm.py                      # LLM factory with Langfuse callback wiring
 │   ├── nodes/
 │   │   ├── __init__.py
-│   │   ├── fetch_context.py
-│   │   ├── analyze.py              # analyze_and_propose (LLM)
-│   │   ├── validate.py             # validate_constraints (deterministic)
-│   │   ├── replan.py               # replan_transfer (LLM)
-│   │   ├── select_captain.py       # (LLM)
-│   │   └── explain.py              # explain_recommendation (LLM)
+│   │   ├── schemas.py              # Pydantic response models (TransferProposal, CaptainPick)
+│   │   ├── fetch_context.py        # Deterministic: FPL API + candidate filter
+│   │   ├── analyze.py              # LLM: analyze_and_propose → TransferProposal
+│   │   ├── validate.py             # Deterministic: constraint engine wrapper
+│   │   ├── replan.py               # LLM: replan_transfer → TransferProposal
+│   │   ├── select_captain.py       # LLM: → CaptainPick
+│   │   └── explain.py              # LLM: → plain text recommendation
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── fpl_client.py           # Async httpx client + tenacity retry
 │   │   ├── models.py               # Pydantic models for API responses
-│   │   └── candidate_filter.py     # Own tested module for candidate pre-filtering
+│   │   ├── candidate_filter.py     # Pre-filtering (form/fixtures only, loose by design)
+│   │   └── demo_cache.json         # Fallback data when FPL API is down
 │   ├── constraints/
 │   │   ├── __init__.py
-│   │   └── engine.py               # Deterministic constraint validator
+│   │   └── engine.py               # Deterministic constraint validator (7 rules)
 │   └── eval/
 │       ├── __init__.py
-│       ├── backtest.py             # Backtesting harness
-│       ├── scoring.py              # Point-outcome scoring
-│       ├── heuristic.py            # Dumb heuristic baseline
-│       └── judge.py                # LLM-judge reasoning coherence
-├── streamlit_app.py                    # Streamlit web UI (top-level for deployment)
+│       ├── backtest.py             # GW replay harness with data leakage prevention
+│       ├── scoring.py              # GWResult, BacktestSummary, point-outcome metrics
+│       ├── heuristic.py            # Deterministic baseline strategy
+│       ├── historical.py           # Historical state reconstruction from FPL API
+│       └── judge.py                # LLM-as-judge reasoning coherence scoring
+├── docs/
+│   ├── PRD.md                      # This file
+│   ├── WALKTHROUGH.md              # Phases 4-6 implementation walkthrough
+│   └── phase_5_baseline.md         # HF Spaces deployment record
 └── tests/
-    ├── conftest.py
+    ├── conftest.py                 # Shared fixtures (make_player, make_fixture, etc.)
+    ├── cassettes/                  # VCR cassettes for mocked LLM responses
     ├── test_constraints.py
     ├── test_fpl_client.py
     ├── test_candidate_filter.py
     ├── test_graph.py
-    └── test_eval.py
+    ├── test_analyze_node.py
+    ├── test_replan_node.py
+    ├── test_explain_node.py
+    ├── test_select_captain_node.py
+    ├── test_validate_node.py
+    ├── test_llm.py
+    ├── test_app_helpers.py
+    ├── test_backtest.py
+    ├── test_scoring.py
+    ├── test_heuristic.py
+    ├── test_historical.py
+    └── test_judge.py
 ```
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Scaffolding + Data Layer
+### Phase 1: Scaffolding + Data Layer ✓
 - Project setup: `pyproject.toml`, directory structure, `.env.example`, `.gitignore`
 - `fpl_client.py`: async httpx client with **tenacity-based retry** and all 5 endpoint methods
 - `models.py`: Pydantic models for Player, SquadPlayer, Fixture
@@ -310,43 +338,44 @@ fpl-strategist/
 - `fpl inspect` CLI command to verify data fetching works
 - Tests with `respx` mocks (including candidate filter tests)
 
-### Phase 2: Constraint Engine
-- `engine.py`: all 6 validation rules
+### Phase 2: Constraint Engine ✓
+- `engine.py`: all 7 validation rules (budget, team limit, position match, availability, squad membership, player existence, no self-swap)
 - Thorough unit tests (most testable component)
 
-### Phase 3: Graph Skeleton
+### Phase 3: Graph Skeleton ✓
 - `state.py`: FPLState TypedDict
 - `fetch_context` node (data fetching + candidate pre-filtering)
 - `validate_constraints` node (calls constraint engine)
-- Wire up `graph.py` with placeholder LLM nodes
+- Wire up `graph.py` with conditional routing
 - Test deterministic path end-to-end
 
-### Phase 4: LLM Nodes
-- `analyze_and_propose` with structured output
-- `replan_transfer` with violation injection
-- `select_captain` with structured output
-- `explain_recommendation`
-- Full graph integration test with real LLM
+### Phase 4: LLM Nodes ✓
+- `analyze_and_propose` with structured output (`TransferProposal`)
+- `replan_transfer` with violation injection and `--force-replan` demo mode
+- `select_captain` with structured output (`CaptainPick`) and vice-captain validation
+- `explain_recommendation` with replan-aware prose
+- `schemas.py`: shared Pydantic response models
+- `llm.py`: LLM factory supporting OpenAI/Anthropic with Langfuse callback wiring
+- Full graph integration test with real LLM (VCR cassettes)
 
-### Phase 5: CLI + Streamlit + Observability
-- `fpl recommend` with Rich formatting
-- `--verbose` trace mode
-- **Streamlit web UI** (`streamlit_app.py`) wrapping the graph
-- **Langfuse integration** for LLM tracing
-- **Measure and report**: cost per run (<$0.05 target), p50 latency (<15s target)
-- Error handling: team not found, API down, season ended
-- Deploy to **HF Spaces or Railway** (live URL)
+### Phase 5: CLI + Gradio + Observability ✓
+- `fpl recommend` with Rich formatting, `--verbose` trace mode, `--force-replan` flag
+- **Gradio web UI** (`app.py` + `app_helpers.py`): team ID input, chat-style trace, transfer/captain cards, squad table, BYOK API key support, daily rate limiting, demo cache fallback
+- **Langfuse integration** via `llm.py` callback wiring
+- Error handling: team not found, API down (falls back to `demo_cache.json`)
+- Deployed to **HF Spaces** (https://huggingface.co/spaces/aarijok/fpl-transfer-strategist)
 
-### Phase 6: Evaluation
-- `scoring.py`: point-outcome metrics
-- `heuristic.py`: dumb heuristic baseline (top-EP at weakest position)
-- `judge.py`: LLM-judge reasoning coherence scoring (factual grounding, logic, actionability)
-- `backtest.py`: harness with data leakage prevention
-- Run backtests over 10-20 GWs
+### Phase 6: Evaluation ✓
+- `scoring.py`: `GWResult` / `BacktestSummary` dataclasses, point-outcome metrics, hit rates
+- `heuristic.py`: deterministic baseline (top form × fixture difficulty, respects budget/team limits)
+- `historical.py`: state reconstruction from FPL API with data leakage prevention
+- `judge.py`: LLM-as-judge coherence scoring (factual grounding, logical coherence, actionability; 1-5 per dimension)
+- `backtest.py`: GW replay harness, scores agent vs heuristic vs user, saves results to JSON/CSV
+- Backtests run over GW 5-25 with canonical results
 
 ### Phase 7: README + Documentation
 - Architecture diagram (Mermaid from LangGraph)
-- Demo GIF of the Streamlit app
+- Demo GIF of the Gradio app
 - Backtest results table with all metrics
 - Langfuse trace screenshot
 - Cost and latency measurements
@@ -359,6 +388,7 @@ fpl-strategist/
 1. **Data layer**: `fpl inspect <real_team_id>` returns correctly formatted squad
 2. **Constraints**: `pytest tests/test_constraints.py` — all rules tested with valid and invalid cases
 3. **Happy path**: `fpl recommend <team_id>` produces a valid recommendation
-4. **Replan path**: `fpl recommend <team_id> --verbose` on a squad where the top transfer candidate triggers a constraint violation → trace shows replan loop
-5. **Eval**: `fpl backtest <team_id> --from-gw 10 --to-gw 15` produces a results table with metrics
-6. **Graph visualization**: `graph.get_graph().draw_mermaid()` renders the topology with the visible replan cycle
+4. **Replan path**: `fpl recommend <team_id> --verbose --force-replan` → trace shows replan loop firing
+5. **Web UI**: Gradio app on HF Spaces accepts team ID, shows trace + recommendation
+6. **Eval**: `fpl backtest <team_id> --from-gw 5 --to-gw 25` produces a results table with metrics
+7. **Graph visualization**: `graph.get_graph().draw_mermaid()` renders the topology with the visible replan cycle
